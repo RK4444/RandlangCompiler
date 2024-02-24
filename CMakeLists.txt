@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.10)
 project(Compiler)
 set(CMAKE_CXX_STANDARD 17)
 set(STANDARD_REQUIRED True)
+set(CMAKE_C_COMPILER clang)
+set(CMAKE_CXX_COMPILER clang++)
 
 find_package(LLVM REQUIRED CONFIG)
 
@@ -19,4 +21,4 @@ target_include_directories(randlang PRIVATE ${include})
 target_include_directories(randlang PRIVATE ${src})
 llvm_map_components_to_libnames(llvm_libs support core irreader)
 
-target_link_libraries(simple-tool ${llvm_libs})
+target_link_libraries(randlang ${llvm_libs})

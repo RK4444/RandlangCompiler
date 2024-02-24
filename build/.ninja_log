@@ -1,0 +1,11 @@
+# ninja log v5
+1	1233	1708775794873035301	CMakeFiles/randlang.dir/src/Lexer.cpp.o	75548e40a1b93f2f
+0	2814	1708775796521087040	CMakeFiles/randlang.dir/src/main.cpp.o	26c87ede9ca562e6
+2	3196	1708775796897098561	CMakeFiles/randlang.dir/src/ASTNodes.cpp.o	fc4a0b03b87d9622
+5	2731	1708775892449970036	CMakeFiles/randlang.dir/src/main.cpp.o	26c87ede9ca562e6
+1	2400	1708776068094912442	CMakeFiles/randlang.dir/src/main.cpp.o	26c87ede9ca562e6
+2	2735	1708776068430941653	CMakeFiles/randlang.dir/src/ASTNodes.cpp.o	fc4a0b03b87d9622
+1	2782	1708776549790691372	CMakeFiles/randlang.dir/src/main.cpp.o	26c87ede9ca562e6
+4	3015	1708776550018689207	CMakeFiles/randlang.dir/src/ASTNodes.cpp.o	fc4a0b03b87d9622
+2	3329	1708776550334686188	CMakeFiles/randlang.dir/src/Parser.cpp.o	bd4ddd477294fe4b
+3330	4578	1708776551590674149	randlang	e43a28a209443109

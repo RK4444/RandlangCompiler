@@ -1,14 +1,31 @@
 #ifndef __ASTNODES_CPP__
 #define __ASTNODES_CPP__
 
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Verifier.h"
 #include "Token.hpp"
 #include <string>
 #include <vector>
 #include <memory>
+#include <map>
 
 class ASTNode { //is named ExprAST in LLVM tutorial
     public:
         virtual ~ASTNode() = default;
+        virtual llvm::Value* codegen() = 0;
+        std::unique_ptr<llvm::LLVMContext> TheContext;
+        std::unique_ptr<llvm::IRBuilder<>> Builder;
+        std::unique_ptr<llvm::Module> TheModule;
+        std::map<std::string, llvm::Value *> NamedValues;
 };
 
 class NumberASTNode : public ASTNode {
@@ -17,6 +34,7 @@ class NumberASTNode : public ASTNode {
 
     public:
         NumberASTNode(double value);
+        llvm::Value* codegen() override;
 };
 
 class VariableASTNode : public ASTNode {
@@ -25,6 +43,7 @@ class VariableASTNode : public ASTNode {
 
     public:
         VariableASTNode(const std::string variableName);
+        llvm::Value* codegen() override;
 };
 
 class BinaryASTNode : public ASTNode {
@@ -34,6 +53,7 @@ class BinaryASTNode : public ASTNode {
     
     public:
         BinaryASTNode(char Op, std::unique_ptr<ASTNode> LHS, std::unique_ptr<ASTNode> RHS);
+        llvm::Value* codegen() override;
 };
 
 class CallASTNode : public ASTNode {
@@ -43,6 +63,7 @@ class CallASTNode : public ASTNode {
 
     public:
         CallASTNode(const std::string& Callee, std::vector<std::unique_ptr<ASTNode>> arguments);
+        llvm::Value* codegen() override;
 };
 
 class PrototypeASTNode : public ASTNode {
@@ -53,6 +74,7 @@ class PrototypeASTNode : public ASTNode {
     public:
         PrototypeASTNode(const std::string& Name, std::vector<std::string> arguments);
         const std::string& getName() const;
+        llvm::Value* codegen() override;
 };
 
 class FunctionASTNode : public ASTNode {
@@ -62,6 +84,7 @@ class FunctionASTNode : public ASTNode {
 
     public:
         FunctionASTNode(std::unique_ptr<PrototypeASTNode> prototype, std::unique_ptr<ASTNode> Body);
+        llvm::Value* codegen() override;
 };
 
 #endif
