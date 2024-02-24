@@ -1,0 +1,22 @@
+[
+{
+  "directory": "/workspaces/Compiler Stuff/build",
+  "command": "/usr/bin/clang++   -g -std=gnu++17 -o CMakeFiles/randlang.dir/src/main.cpp.o -c \"/workspaces/Compiler Stuff/src/main.cpp\"",
+  "file": "/workspaces/Compiler Stuff/src/main.cpp"
+},
+{
+  "directory": "/workspaces/Compiler Stuff/build",
+  "command": "/usr/bin/clang++   -g -std=gnu++17 -o CMakeFiles/randlang.dir/src/Lexer.cpp.o -c \"/workspaces/Compiler Stuff/src/Lexer.cpp\"",
+  "file": "/workspaces/Compiler Stuff/src/Lexer.cpp"
+},
+{
+  "directory": "/workspaces/Compiler Stuff/build",
+  "command": "/usr/bin/clang++   -g -std=gnu++17 -o CMakeFiles/randlang.dir/src/Parser.cpp.o -c \"/workspaces/Compiler Stuff/src/Parser.cpp\"",
+  "file": "/workspaces/Compiler Stuff/src/Parser.cpp"
+},
+{
+  "directory": "/workspaces/Compiler Stuff/build",
+  "command": "/usr/bin/clang++   -g -std=gnu++17 -o CMakeFiles/randlang.dir/src/ASTNodes.cpp.o -c \"/workspaces/Compiler Stuff/src/ASTNodes.cpp\"",
+  "file": "/workspaces/Compiler Stuff/src/ASTNodes.cpp"
+}
+]

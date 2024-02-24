@@ -1,0 +1,266 @@
+#include "../include/Parser.h"
+#include "../include/Token.hpp"
+#include "../include/Lexer.h"
+#include "../include/ASTNodes.h"
+#include <iostream>
+#include <string>
+#include <vector>
+
+Parser::Parser(const char* beg) : lex(beg), curTok(Token::Kind::Semicolon) {
+    BinopPrecedence['='] = 2;
+    BinopPrecedence['<'] = 10;
+    BinopPrecedence['>'] = 10;
+    BinopPrecedence['+'] = 20;
+    BinopPrecedence['-'] = 20;
+    BinopPrecedence['*'] = 40;
+}
+
+Parser::~Parser()
+{
+}
+
+void Parser::getNextToken() {
+    curTok = lex.next();
+}
+
+std::unique_ptr<ASTNode> Parser::logError(const char* str){
+    std::cerr << str << std::endl;
+    return nullptr;
+}
+std::unique_ptr<PrototypeASTNode> Parser::pLogError(const char* str) {
+    logError(str);
+    return nullptr;
+}
+
+std::unique_ptr<ASTNode> Parser::parseNumberExpr() {
+    double val = std::stod(std::string(curTok.lexeme()));
+    auto Result = std::make_unique<NumberASTNode>(val);
+    getNextToken();
+    //std::cout << "Parsed number" << std::endl;
+    return std::move(Result);
+}
+
+std::unique_ptr<ASTNode> Parser::parseParenExpr() {
+    getNextToken();
+    auto V = parseExpression();
+    if (!V) {
+        return nullptr;
+    }
+
+    if (curTok.kind() != Token::Kind::RightParen) {
+        return logError("expected ')'");
+    }
+    getNextToken();
+    //std::cout << "Parsed parentese expression" << std::endl;
+    return V;
+}
+
+std::unique_ptr<ASTNode> Parser::parseIdentifierExpr() {
+    std::string idName = std::string(curTok.lexeme());
+    getNextToken();
+
+    if (curTok.kind() != Token::Kind::LeftParen) {
+        return std::make_unique<VariableASTNode>(idName);
+    }
+
+    getNextToken();
+    std::vector<std::unique_ptr<ASTNode>> args;
+    while (curTok.kind() != Token::Kind::LeftParen)
+    {
+        if (auto arg = parseExpression()) {
+            args.push_back(std::move(arg));
+        } else {
+            return nullptr;
+        }
+
+        if (curTok.kind() != Token::Kind::Comma) {
+            return logError("Expected ')' or ',' in argument list");
+        }
+        getNextToken();
+    }
+    //std::cout << "Parsed function call" << std::endl;
+    return std::make_unique<CallASTNode>(idName, std::move(args));
+}
+
+std::unique_ptr<ASTNode> Parser::parsePrimary() {
+    switch (curTok.kind())
+    {
+    case Token::Kind::Identifier:
+        return parseIdentifierExpr();
+    case Token::Kind::Number:
+        return parseNumberExpr();
+    case Token::Kind::LeftParen:
+        return parseParenExpr();
+    
+    default:
+        return logError("unknown token when expecting a expression");
+    }
+}
+
+std::unique_ptr<ASTNode> Parser::parseExpression() {
+    auto LHS = parsePrimary();
+    if (!LHS) {
+        return nullptr;
+    }
+    //std::cout << "Parsed expression" << std::endl;
+    return parseBinOpRHS(0, std::move(LHS));
+}
+
+std::unique_ptr<ASTNode> Parser::parseBinOpRHS(int exprPrec, std::unique_ptr<ASTNode> LHS) {
+    while (true)
+    {
+        int tokPrec = getTokenPrecedence();
+
+        if (tokPrec < exprPrec)
+        {
+            return LHS;
+        }
+        
+        Token binOP = curTok;
+        getNextToken();
+
+        auto RHS = parsePrimary();
+        if (!RHS) {
+            return nullptr;
+        }
+
+        int nextPrec = getTokenPrecedence();
+        if (tokPrec < nextPrec) {
+            RHS = parseBinOpRHS(tokPrec+1, std::move(RHS));
+            if (!RHS) {
+                return nullptr;
+            }
+        }
+        //std::cout << "Parsed RHS" << std::endl;
+        LHS = std::make_unique<BinaryASTNode>((char)*binOP.lexeme().begin(), std::move(LHS), std::move(RHS)); //attention here. this doesn't work probable
+    }
+    
+}
+
+std::unique_ptr<PrototypeASTNode> Parser::parsePrototype() {
+    if (curTok.kind() != Token::Kind::Identifier) {
+        return pLogError("Expected function name in prototype");
+    }
+    std::string fnName = std::string(curTok.lexeme());
+    getNextToken();
+
+    if (curTok.kind() != Token::Kind::LeftParen) {
+        return pLogError("Expected '(' in prototype");
+    }
+
+    std::vector<std::string> argNames;
+    getNextToken();
+    while (curTok.kind() == Token::Kind::Identifier)
+    {
+        argNames.push_back(std::string(curTok.lexeme()));
+        getNextToken();
+    }
+    if (curTok.kind() != Token::Kind::RightParen)
+    {
+        return pLogError("Expected ')' in prototype");
+    }
+    
+    getNextToken();
+    //std::cout << "Parsed function prototype" << std::endl;
+    return std::make_unique<PrototypeASTNode>(fnName, std::move(argNames));
+    
+}
+
+std::unique_ptr<FunctionASTNode> Parser::parseDefinition() {
+    getNextToken();
+    auto Proto = parsePrototype();
+    if (!Proto) {
+        return nullptr;
+    }
+
+    if (auto E = parseExpression()) {
+        //std::cout << "Parsed function" << std::endl;
+        return std::make_unique<FunctionASTNode>(std::move(Proto), std::move(E));
+    }
+    return nullptr;
+}
+
+std::unique_ptr<PrototypeASTNode> Parser::parseExtern() {
+    getNextToken();
+    //std::cout << "Parsed extern" << std::endl;
+    return parsePrototype();
+}
+
+std::unique_ptr<FunctionASTNode> Parser::parseTopLevelExpr() {
+    if (auto E = parseExpression())
+    {
+        auto Proto = std::make_unique<PrototypeASTNode>("", std::vector<std::string>());
+        return std::make_unique<FunctionASTNode>(std::move(Proto), std::move(E));
+    }
+    return nullptr;
+}
+
+int Parser::getTokenPrecedence() {
+    if (!isascii((char)*curTok.lexeme().begin())) {
+        return -1;
+    }
+
+    int tokPrec = BinopPrecedence[(char)*curTok.lexeme().begin()];
+    if (tokPrec <= 0) {
+        return -1;
+    }
+    return tokPrec;
+}
+
+void Parser::parse() {
+    while (true)
+    {
+        switch (curTok.kind())
+        {
+            case Token::Kind::End:
+                return;
+            case Token::Kind::Semicolon:
+                getNextToken();
+                break;
+            case Token::Kind::Keyword:
+                if (curTok.lexeme() == "int" || curTok.lexeme() == "void" || curTok.lexeme() == "double" || curTok.lexeme() == "float")
+                {
+                    HandleDefinition();
+                    break;
+                } else if (curTok.lexeme() == "extern")
+                {
+                    HandleExtern();
+                    break;
+                }
+                getNextToken();
+                break;
+            default:
+                HandleTopLevelExpression();
+                break;
+        }
+    }
+    
+}
+
+void Parser::HandleDefinition() {
+  if (parseDefinition() != nullptr) {
+    std::cout << "Parsed a function definition." << std::endl;
+  } else {
+    // Skip token for error recovery.
+    getNextToken();
+  }
+}
+
+void Parser::HandleExtern() {
+  if (parseExtern() != nullptr) {
+    std::cout << "Parsed an extern" << std::endl;
+  } else {
+    // Skip token for error recovery.
+    getNextToken();
+  }
+}
+
+void Parser::HandleTopLevelExpression() {
+  // Evaluate a top-level expression into an anonymous function.
+  if (parseTopLevelExpr() != nullptr) {
+    std::cout << "Parsed a top-level expr" << std::endl;
+  } else {
+    // Skip token for error recovery.
+    getNextToken();
+  }
+}
