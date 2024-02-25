@@ -22,10 +22,11 @@ class ASTNode { //is named ExprAST in LLVM tutorial
     public:
         virtual ~ASTNode() = default;
         virtual llvm::Value* codegen() = 0;
-        std::unique_ptr<llvm::LLVMContext> TheContext;
-        std::unique_ptr<llvm::IRBuilder<>> Builder;
-        std::unique_ptr<llvm::Module> TheModule;
-        std::map<std::string, llvm::Value *> NamedValues;
+        static std::unique_ptr<llvm::LLVMContext> TheContext;
+        static std::unique_ptr<llvm::IRBuilder<>> Builder;
+        static std::unique_ptr<llvm::Module> TheModule;
+        static std::map<std::string, llvm::Value *> NamedValues;
+        llvm::Value* vLogError(const char *str);
 };
 
 class NumberASTNode : public ASTNode {
@@ -74,7 +75,7 @@ class PrototypeASTNode : public ASTNode {
     public:
         PrototypeASTNode(const std::string& Name, std::vector<std::string> arguments);
         const std::string& getName() const;
-        llvm::Value* codegen() override;
+        llvm::Function* codegen() override;
 };
 
 class FunctionASTNode : public ASTNode {
@@ -84,7 +85,7 @@ class FunctionASTNode : public ASTNode {
 
     public:
         FunctionASTNode(std::unique_ptr<PrototypeASTNode> prototype, std::unique_ptr<ASTNode> Body);
-        llvm::Value* codegen() override;
+        llvm::Function* codegen() override;
 };
 
 #endif

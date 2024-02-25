@@ -1,3 +1,14 @@
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Verifier.h"
 #include "../include/Parser.h"
 #include "../include/Token.hpp"
 #include "../include/Lexer.h"
@@ -13,6 +24,10 @@ Parser::Parser(const char* beg) : lex(beg), curTok(Token::Kind::Semicolon) {
     BinopPrecedence['+'] = 20;
     BinopPrecedence['-'] = 20;
     BinopPrecedence['*'] = 40;
+
+    ASTNode::TheContext = std::make_unique<llvm::LLVMContext>();
+    ASTNode::TheModule = std::make_unique<llvm::Module>("my cool jit", *ASTNode::TheContext);
+    ASTNode::Builder = std::make_unique<llvm::IRBuilder<>>(*ASTNode::TheContext);
 }
 
 Parser::~Parser()
@@ -21,6 +36,7 @@ Parser::~Parser()
 
 void Parser::getNextToken() {
     curTok = lex.next();
+    //std::cout << curTok.lexeme() << std::endl;
 }
 
 std::unique_ptr<ASTNode> Parser::logError(const char* str){
@@ -238,8 +254,13 @@ void Parser::parse() {
 }
 
 void Parser::HandleDefinition() {
-  if (parseDefinition() != nullptr) {
-    std::cout << "Parsed a function definition." << std::endl;
+  if (auto FnAST = parseDefinition()) {
+    if (auto *FnIR = FnAST->codegen()) {
+        std::cout << "Parsed a function definition." << std::endl;
+        FnIR->print(llvm::errs());
+        std::cout << "\n";
+    }
+        
   } else {
     // Skip token for error recovery.
     getNextToken();
@@ -247,8 +268,12 @@ void Parser::HandleDefinition() {
 }
 
 void Parser::HandleExtern() {
-  if (parseExtern() != nullptr) {
-    std::cout << "Parsed an extern" << std::endl;
+  if (auto FnAST = parseExtern()) {
+    if (auto *FnIR = FnAST->codegen()) {
+        std::cout << "Parsed an extern." << std::endl;
+        FnIR->print(llvm::errs());
+        std::cout << "\n";
+    }
   } else {
     // Skip token for error recovery.
     getNextToken();
@@ -257,8 +282,13 @@ void Parser::HandleExtern() {
 
 void Parser::HandleTopLevelExpression() {
   // Evaluate a top-level expression into an anonymous function.
-  if (parseTopLevelExpr() != nullptr) {
-    std::cout << "Parsed a top-level expr" << std::endl;
+  if (auto FnAST = parseTopLevelExpr()) {
+    if (auto* FnIR = FnAST->codegen()) {
+        std::cout << "Parsed a top-level expr" << std::endl;
+        FnIR->print(llvm::errs());
+        std::cout << "\n";
+    }
+    
   } else {
     // Skip token for error recovery.
     getNextToken();

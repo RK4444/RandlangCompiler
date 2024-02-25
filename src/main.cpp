@@ -34,9 +34,10 @@ int main(int argc, char** argv) {
     {
       while (filestr.good())
       {
-        filestr >> snipped;
+        std::getline(filestr, snipped);
         code += snipped;
         code += "\n";
+        //std::cout << snipped << std::endl;
       }
       
       
@@ -44,6 +45,9 @@ int main(int argc, char** argv) {
       std::cerr << "could not open file";
       return -1;
     }
+
+    //std::cout << code.c_str() << std::endl;
+
     Parser cparse(code.c_str());
     cparse.parse();
   //   Lexer lex(code.c_str());

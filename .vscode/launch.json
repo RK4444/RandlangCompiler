@@ -6,11 +6,12 @@
     "configurations": [
         {
             "name": "randlang",
-            "type": "cppvsdbg",
+            "type": "cppdbg",
             "request": "launch",
-            "program": "C:\\Users\\Tobias\\Documents\\C++\\Compiler Stuff\\build\\Debug\\randlang.exe",
+            "program": "build/randlang",
             "args": ["rdlgExamples/code.rdlg"],
-            "cwd": "${workspaceFolder}"
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "Echo vars"
         }
     ]
     

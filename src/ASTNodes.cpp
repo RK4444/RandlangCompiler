@@ -12,6 +12,11 @@
 #include "../include/ASTNodes.h"
 #include <memory>
 
+std::unique_ptr<llvm::LLVMContext> ASTNode::TheContext = nullptr;
+std::unique_ptr<llvm::IRBuilder<>> ASTNode::Builder = nullptr;
+std::unique_ptr<llvm::Module> ASTNode::TheModule = nullptr;
+std::map<std::string, llvm::Value *> ASTNode::NamedValues;
+
 NumberASTNode::NumberASTNode(double value) : val(value) {}
 
 VariableASTNode::VariableASTNode(const std::string variableName) : varName(variableName){}
@@ -22,6 +27,10 @@ CallASTNode::CallASTNode(const std::string& Callee, std::vector<std::unique_ptr<
 
 PrototypeASTNode:: PrototypeASTNode(const std::string& Name, std::vector<std::string> arguments) : name(Name), args(std::move(arguments)) {}
 
+const std::string& PrototypeASTNode::getName() const {
+    return name;
+};
+
 FunctionASTNode:: FunctionASTNode(std::unique_ptr<PrototypeASTNode> prototype, std::unique_ptr<ASTNode> Body) : proto(std::move(prototype)), body(std::move(Body)) {}
 
 llvm::Value* NumberASTNode::codegen() {
@@ -29,21 +38,119 @@ llvm::Value* NumberASTNode::codegen() {
 }
 
 llvm::Value* VariableASTNode::codegen() {
-    
+    std::string variableName = varName;
+    llvm::Value* V = NamedValues[variableName];
+    if (!V)
+    {
+        vLogError("Unknown variable name");
+    }
+    return V;
 }
 
 llvm::Value* BinaryASTNode::codegen() {
+    llvm::Value* L = LHS->codegen();
+    llvm::Value* R = RHS->codegen();
+    if (!L || !R)
+    {
+       return nullptr;
+    }
     
+    switch (op)
+    {
+    case '+':
+        return ASTNode::Builder->CreateFAdd(L, R, "addtmp");
+
+    case '-':
+        return ASTNode::Builder->CreateFSub(L, R, "subtmp");
+
+    case '*':
+        return ASTNode::Builder->CreateFMul(L, R, "multmp");
+
+    case '<':
+        L = ASTNode::Builder->CreateFCmpULT(L, R, "cmptmp");
+        return ASTNode::Builder->CreateUIToFP(L, llvm::Type::getDoubleTy(*TheContext), "booltmp");
+    
+    default:
+        return vLogError("invalid binary operator");
+    }
 }
 
 llvm::Value* CallASTNode::codegen() {
+    llvm::Function* CalleeF = TheModule->getFunction(callee);
+    if (!CalleeF)
+    {
+        return vLogError("unknown function referenced");
+    }
+
+    if (CalleeF->arg_size() != args.size())
+    {
+        return vLogError("Incorrect number of arguments");
+    }
     
+    std::vector<llvm::Value*> argsV;
+    for (unsigned i = 0, e = args.size(); i != e; i++)
+    {
+        argsV.push_back(args[i]->codegen());
+        if (!argsV.back())
+        {
+            return nullptr;
+        }
+        
+    }
+    
+    return Builder->CreateCall(CalleeF, argsV, "calltmp");
 }
 
-llvm::Value* PrototypeASTNode::codegen() {
-    
+
+llvm::Function* PrototypeASTNode::codegen() {
+    std::vector<llvm::Type*> Doubles(args.size(), llvm::Type::getDoubleTy(*TheContext));
+
+    llvm::FunctionType* FT = llvm::FunctionType::get(llvm::Type::getDoubleTy(*TheContext), Doubles, false);
+    llvm::Function* F = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, name, TheModule.get());
+
+    unsigned Idx = 0;
+    for (auto& Arg : F->args()) {
+        Arg.setName(args[Idx++]);
+    }
+
+    return F;
 }
 
-llvm::Value* FunctionASTNode::codegen() {
-    
+llvm::Function* FunctionASTNode::codegen() {
+    llvm::Function* TheFunction = TheModule->getFunction(proto->getName());
+
+    if(!TheFunction) {
+        TheFunction = proto->codegen();
+    }
+
+    if(!TheFunction) {
+        return nullptr;
+    }
+
+    if(!TheFunction->empty()) {
+        return (llvm::Function*) vLogError("Function cannot be redefined");
+    }
+
+    llvm::BasicBlock* BB = llvm::BasicBlock::Create(*TheContext, "entry", TheFunction);
+    Builder->SetInsertPoint(BB);
+
+    NamedValues.clear();
+    for(auto& Arg : TheFunction->args()) {
+        NamedValues[std::string(Arg.getName())] = &Arg;
+    }
+
+    if(llvm::Value *RetVal = body->codegen()) {
+        Builder->CreateRet(RetVal);
+        llvm::verifyFunction(*TheFunction);
+
+        return TheFunction;
+    }
+
+    TheFunction->eraseFromParent();
+    return nullptr;
+}
+
+llvm::Value* ASTNode::vLogError(const char *str){
+    std::cout << "Code generation error: " << str << std::endl;
+    return nullptr;
 }
