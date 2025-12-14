@@ -4,7 +4,7 @@ Compiler fascinate me, since I learned to program. Because of that, I wanted to 
 ## Basic Structure
 The project is ordered approximately like any cpp project is, with a src and a include folder
 ## Build System
-CMake is used as a build system. Note that in order to use the LLVM libraries, I compiled them from source like seen [here](https://llvm.org/docs/CMake.html) and [here](https://youtu.be/KYaojNbujKM?list=PLlONLmJCfHTo9WYfsoQvwjsa5ZB6hjOG5&t=156). Once LLVM is compiled from source, cmake can be used on the CmakeLists.txt file. From within root folder, best practice is:
+CMake is used as a build system. Note that in order to use the LLVM libraries, I compiled them from source like seen [here](https://llvm.org/docs/CMake.html) and [here](https://youtu.be/KYaojNbujKM?list=PLlONLmJCfHTo9WYfsoQvwjsa5ZB6hjOG5&t=156). Once LLVM is compiled from source, make can be used. From within root folder, best practice is:
 
 ```
 mkdir build2
