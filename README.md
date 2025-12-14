@@ -7,9 +7,14 @@ The project is ordered approximately like any cpp project is, with a src and a i
 CMake is used as a build system. Note that in order to use the LLVM libraries, I compiled them from source like seen [here](https://llvm.org/docs/CMake.html) and [here](https://youtu.be/KYaojNbujKM?list=PLlONLmJCfHTo9WYfsoQvwjsa5ZB6hjOG5&t=156). Once LLVM is compiled from source, cmake can be used on the CmakeLists.txt file. From within root folder, best practice is:
 
 ```
-mkdir build && cd build
-cmake ..
+mkdir build2
+make
 ```
 
+The folder `build2` is for `make` only, since `build` is for `cmake` configuration (currently not working).
+
 ## Recommended Development environment
-For development, I use vscode with the C++ and CMake extensions installed. If you don't have the clang compiler installed, you are free to use gcc aswell, although clang is recommended by llvm.
+For development, I use vscode with the C++ and CMake extensions installed. If you don't already have, install the `clang` compiler, since it is recommended by the creators of `llvm` and to avoid problems.
+
+## State of the project
+It is currently able to emit object files.
