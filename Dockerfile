@@ -1,4 +1,4 @@
-FROM snowstep/llvm:latest
+FROM stagex/llvm:latest
 
 RUN sudo apt update
 RUN sudo apt install -y build-essential

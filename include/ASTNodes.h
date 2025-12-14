@@ -12,6 +12,15 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/StandardInstrumentations.h"
+#include "llvm/Support/TargetSelect.h"
+#include "llvm/Target/TargetMachine.h"
+#include "llvm/Transforms/InstCombine/InstCombine.h"
+#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/GVN.h"
+#include "llvm/Transforms/Scalar/Reassociate.h"
+#include "llvm/Transforms/Scalar/SimplifyCFG.h"
 #include "Token.hpp"
 #include <string>
 #include <vector>
@@ -26,6 +35,13 @@ class ASTNode { //is named ExprAST in LLVM tutorial
         static std::unique_ptr<llvm::IRBuilder<>> Builder;
         static std::unique_ptr<llvm::Module> TheModule;
         static std::map<std::string, llvm::Value *> NamedValues;
+        // static std::unique_ptr<llvm::FunctionPassManager> TheFPM; // interpreter only
+        // static std::unique_ptr<llvm::LoopAnalysisManager> TheLAM;
+        // static std::unique_ptr<llvm::FunctionAnalysisManager> TheFAM;
+        // static std::unique_ptr<llvm::CGSCCAnalysisManager> TheCGAM;
+        // static std::unique_ptr<llvm::ModuleAnalysisManager> TheMAM;
+        // static std::unique_ptr<llvm::PassInstrumentationCallbacks> ThePIC;
+        // static std::unique_ptr<llvm::StandardInstrumentations> TheSI;
         llvm::Value* vLogError(const char *str);
 };
 

@@ -9,6 +9,15 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/StandardInstrumentations.h"
+#include "llvm/Support/TargetSelect.h"
+#include "llvm/Target/TargetMachine.h"
+#include "llvm/Transforms/InstCombine/InstCombine.h"
+#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/GVN.h"
+#include "llvm/Transforms/Scalar/Reassociate.h"
+#include "llvm/Transforms/Scalar/SimplifyCFG.h"
 #include "../include/Parser.h"
 #include "../include/Token.hpp"
 #include "../include/Lexer.h"
@@ -18,6 +27,12 @@
 #include <vector>
 
 Parser::Parser(const char* beg) : lex(beg), curTok(Token::Kind::Semicolon) {
+    // llvm::InitializeNativeTarget();
+    // llvm::InitializeNativeTargetAsmPrinter();
+    // llvm::InitializeNativeTargetAsmParser();
+
+    
+
     BinopPrecedence['='] = 2;
     BinopPrecedence['<'] = 10;
     BinopPrecedence['>'] = 10;
@@ -25,17 +40,38 @@ Parser::Parser(const char* beg) : lex(beg), curTok(Token::Kind::Semicolon) {
     BinopPrecedence['-'] = 20;
     BinopPrecedence['*'] = 40;
 
-    ASTNode::TheContext = std::make_unique<llvm::LLVMContext>();
-    ASTNode::TheModule = std::make_unique<llvm::Module>("my cool jit", *ASTNode::TheContext);
-    ASTNode::Builder = std::make_unique<llvm::IRBuilder<>>(*ASTNode::TheContext);
+
+
+    //theJIT = ExitOnErr(llvm::orc::KaleidoscopeJIT::Create()); //TODO: Continue from https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/LangImpl04.html
+
+    InitializeModulesAndManagers();
 }
 
 Parser::~Parser()
 {
 }
 
-void Parser::getNextToken() {
-    curTok = lex.next();
+void Parser::InitializeModulesAndManagers() {
+    ASTNode::TheContext = std::make_unique<llvm::LLVMContext>();
+    ASTNode::TheModule = std::make_unique<llvm::Module>("my cool jit", *ASTNode::TheContext);
+    //ASTNode::TheModule->setDataLayout(theJIT->getDataLayout());
+
+    ASTNode::Builder = std::make_unique<llvm::IRBuilder<>>(*ASTNode::TheContext);
+
+    // ASTNode::TheFPM = std::make_unique<llvm::FunctionPassManager>(); //Interpreter only
+    // ASTNode::TheLAM = std::make_unique<llvm::LoopAnalysisManager>();
+    // ASTNode::TheFAM = std::make_unique<llvm::FunctionAnalysisManager>();
+    // ASTNode::TheCGAM = std::make_unique<llvm::CGSCCAnalysisManager>();
+    // ASTNode::TheMAM = std::make_unique<llvm::ModuleAnalysisManager>();
+    // ASTNode::ThePIC = std::make_unique<llvm::PassInstrumentationCallbacks>();
+    // ASTNode::TheSI = std::make_unique<llvm::StandardInstrumentations>(*ASTNode::TheContext, /*DebugLogging*/ true);
+
+    // ASTNode::TheFPM->addPass(llvm::InstCombinePass());
+
+}
+
+Token Parser::getNextToken() {
+    return curTok = lex.next();
     //std::cout << curTok.lexeme() << std::endl;
 }
 
@@ -284,6 +320,7 @@ void Parser::HandleTopLevelExpression() {
   // Evaluate a top-level expression into an anonymous function.
   if (auto FnAST = parseTopLevelExpr()) {
     if (auto* FnIR = FnAST->codegen()) {
+
         std::cout << "Parsed a top-level expr" << std::endl;
         FnIR->print(llvm::errs());
         std::cout << "\n";

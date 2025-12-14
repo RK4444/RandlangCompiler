@@ -1,16 +1,22 @@
 cmake_minimum_required(VERSION 3.10)
 project(Compiler)
+set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_C_COMPILER clang-18)
+set(CMAKE_CXX_COMPILER clang++-18)
 set(CMAKE_CXX_STANDARD 17)
 set(STANDARD_REQUIRED True)
-set(CMAKE_C_COMPILER clang)
-set(CMAKE_CXX_COMPILER clang++)
+
+find_package(ZLIB REQUIRED)
+find_package(zstd REQUIRED)
 
 find_package(LLVM REQUIRED CONFIG)
 
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
+message(STATUS "LLVM libs are ${llvm_libs}")
 
 include_directories(${LLVM_INCLUDE_DIRS})
+separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
 add_definitions(${LLVM_DEFINITIONS})
 
 set (srcdir "${PROJECT_SOURCE_DIR}/src")

@@ -11,7 +11,7 @@ class Parser
 {
 private:
     Token curTok;
-    void getNextToken();
+    Token getNextToken();
     Lexer lex;
     std::map<char, int> BinopPrecedence;
 
@@ -27,6 +27,8 @@ private:
     std::unique_ptr<FunctionASTNode> parseDefinition();
     std::unique_ptr<PrototypeASTNode> parseExtern();
     std::unique_ptr<FunctionASTNode> parseTopLevelExpr();
+    llvm::ExitOnError ExitOnErr;
+    void InitializeModulesAndManagers();
     void HandleDefinition();
     void HandleExtern();
     void HandleTopLevelExpression();

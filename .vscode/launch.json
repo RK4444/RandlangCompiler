@@ -8,8 +8,8 @@
             "name": "randlang",
             "type": "cppdbg",
             "request": "launch",
-            "program": "build/randlang",
-            "args": ["rdlgExamples/code.rdlg"],
+            "program": "${workspaceFolder}/build/randlang",
+            "args": ["${workspaceFolder}/rdlgExamples/code.rdlg"],
             "cwd": "${workspaceFolder}",
             "preLaunchTask": "Echo vars"
         }
