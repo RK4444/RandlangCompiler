@@ -40,9 +40,9 @@ int main(int argc, char** argv) {
   //     "}\n"
   //     "var norm = function(u{:}) -> scalar { return sqrt(dot(u, u)); }\n"
   //     "<end>";
-    if (argc != 2)
+    if (argc != 3) // max is argv[2]
     {
-      std::cerr << "Number of Arguments is not right";
+      std::cerr << "USAGE: randlang <inputFile> <outputFile>";
       return -1;
     }
 
@@ -107,9 +107,11 @@ int main(int argc, char** argv) {
 
     ASTNode::TheModule->setDataLayout(TheTargetMachine->createDataLayout());
 
-    auto Filename = "output.o";
+    auto Filename = argv[2];
     std::error_code EC;
     llvm::raw_fd_ostream dest(Filename, EC, llvm::sys::fs::OF_None);
+    // llvm::raw_fd_ostream dest(Filename, EC, llvm::sys::fs::CD_OpenAlways, llvm::sys::fs::FA_Write, llvm::sys::fs::OF_None); //A different option
+    
 
     if (EC) {
       llvm::errs() << "Could not open file: " << EC.message();

@@ -1,5 +1,5 @@
 GXX_COMPILER=clang++
-C_FLAGS=$(shell llvm-config --cxxflags)
+C_FLAGS=$(shell llvm-config --cxxflags) -Wall -Wpedantic
 L_FLAGS=$(shell llvm-config --cxxflags --ldflags --system-libs --libs all)
 
 SRC_DIR = src
@@ -26,8 +26,7 @@ example: exampleCompile
 	$(GXX_COMPILER) $(EXAMPLE_DIR)/test.cpp $(EXAMPLE_DIR)/output.o -o $(EXAMPLE_DIR)/exampleMain
 
 exampleCompile: randlang
-	$(BUILD_DIR)/randlang $(EXAMPLE_DIR)/code.rdlg
-	@mv output.o $(EXAMPLE_DIR)
+	$(BUILD_DIR)/randlang $(EXAMPLE_DIR)/code.rdlg $(EXAMPLE_DIR)/output.o
 
 clean:
 	rm -f $(BUILD_DIR)/*.o
