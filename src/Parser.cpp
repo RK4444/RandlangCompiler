@@ -109,15 +109,15 @@ std::unique_ptr<ASTNode> Parser::parseParenExpr() {
 
 std::unique_ptr<ASTNode> Parser::parseIdentifierExpr() {
     std::string idName = std::string(curTok.lexeme());
-    getNextToken();
+    
 
-    if (curTok.kind() != Token::Kind::LeftParen) {
+    if (getNextToken().kind() != Token::Kind::LeftParen) {
         return std::make_unique<VariableASTNode>(idName);
     }
 
-    getNextToken();
+    
     std::vector<std::unique_ptr<ASTNode>> args;
-    while (curTok.kind() != Token::Kind::LeftParen)
+    while (getNextToken().kind() != Token::Kind::LeftParen)
     {
         if (auto arg = parseExpression()) {
             args.push_back(std::move(arg));
@@ -194,18 +194,18 @@ std::unique_ptr<PrototypeASTNode> Parser::parsePrototype() {
         return pLogError("Expected function name in prototype");
     }
     std::string fnName = std::string(curTok.lexeme());
-    getNextToken();
+    
 
-    if (curTok.kind() != Token::Kind::LeftParen) {
+    if (getNextToken().kind() != Token::Kind::LeftParen) {
         return pLogError("Expected '(' in prototype");
     }
 
     std::vector<std::string> argNames;
-    getNextToken();
-    while (curTok.kind() == Token::Kind::Identifier)
+    
+    while (getNextToken().kind() == Token::Kind::Identifier) //TODO: Check if this works every time
     {
         argNames.push_back(std::string(curTok.lexeme()));
-        getNextToken();
+        //getNextToken();
     }
     if (curTok.kind() != Token::Kind::RightParen)
     {
