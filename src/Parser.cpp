@@ -26,7 +26,7 @@
 #include <string>
 #include <vector>
 
-Parser::Parser(const char* beg) : lex(beg), curTok(Token::Kind::Semicolon) {
+Parser::Parser(const char* beg) : curTok(Token::Kind::Semicolon), lex(beg) {
     // llvm::InitializeNativeTarget();
     // llvm::InitializeNativeTargetAsmPrinter();
     // llvm::InitializeNativeTargetAsmParser();
@@ -40,9 +40,6 @@ Parser::Parser(const char* beg) : lex(beg), curTok(Token::Kind::Semicolon) {
     BinopPrecedence['-'] = 20;
     BinopPrecedence['*'] = 40;
 
-
-
-    //theJIT = ExitOnErr(llvm::orc::KaleidoscopeJIT::Create()); //TODO: Continue from https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/LangImpl04.html
 
     InitializeModulesAndManagers();
 }
@@ -270,7 +267,7 @@ void Parser::parse() {
                 getNextToken();
                 break;
             case Token::Kind::Keyword:
-                if (curTok.lexeme() == "int" || curTok.lexeme() == "void" || curTok.lexeme() == "double" || curTok.lexeme() == "float")
+                if (curTok.lexeme() == "fn")
                 {
                     HandleDefinition();
                     break;

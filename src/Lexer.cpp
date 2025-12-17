@@ -227,7 +227,7 @@ Token Lexer::identifier() noexcept {
   while (is_identifier_char(peek())) get();
   std::string_view kwidentifier(start, std::distance(start, m_beg));
   if (kwidentifier == "void" || kwidentifier == "int" || kwidentifier == "double" || kwidentifier == "float" || kwidentifier == "for" || kwidentifier == "while" ||
-   kwidentifier == "if" || kwidentifier == "else" || kwidentifier == "return" || kwidentifier == "string" || kwidentifier == "extern")
+   kwidentifier == "if" || kwidentifier == "else" || kwidentifier == "return" || kwidentifier == "string" || kwidentifier == "extern" || kwidentifier == "fn" || kwidentifier == "then")
   {
    return Token(Token::Kind::Keyword, start, m_beg);
   }
