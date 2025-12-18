@@ -13,7 +13,6 @@ find_package(LLVM REQUIRED CONFIG)
 
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
-message(STATUS "LLVM libs are ${llvm_libs}")
 
 include_directories(${LLVM_INCLUDE_DIRS})
 separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
@@ -23,8 +22,14 @@ set (srcdir "${PROJECT_SOURCE_DIR}/src")
 set (incdir "${PROJECT_SOURCE_DIR}/include")
 set(SOURCES ${srcdir}/main.cpp ${srcdir}/Lexer.cpp ${srcdir}/Parser.cpp ${srcdir}/ASTNodes.cpp ${incdir}/Lexer.h ${incdir}/Parser.h ${incdir}/ASTNodes.h ${incdir}/Token.hpp)
 add_executable(randlang ${SOURCES})
+target_compile_options(randlang PUBLIC ${LLVM_CXXFLAGS})
 target_include_directories(randlang PRIVATE ${include})
 target_include_directories(randlang PRIVATE ${src})
-llvm_map_components_to_libnames(llvm_libs support core irreader)
+llvm_map_components_to_libnames(llvm_libs 
+    support
+    core
+    irreader
+    native
+    ${LLVM_TARGETS_TO_BUILD})
 
-target_link_libraries(randlang ${llvm_libs})
+target_link_libraries(randlang ${LLVM_SYSTEM_LIBS} ${llvm_libs})

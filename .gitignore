@@ -1,4 +1,4 @@
 build
 build2
 rdlgExamples/*.o
-rdlgExamples/exampleMain
+rdlgExamples/exampleMain*
