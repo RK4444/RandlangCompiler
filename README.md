@@ -13,6 +13,13 @@ make
 
 The folder `build2` is for `make` only, since `build` is for `cmake` configuration (currently not working).
 
+If you prefer `cmake`, use
+
+```
+mkdir build && cd build
+cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ ..
+```
+
 ## Recommended Development environment
 For development, I use vscode with the C++ and CMake extensions installed. If you don't already have, install the `clang` compiler, since it is recommended by the creators of `llvm` and to avoid problems.
 

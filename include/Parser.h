@@ -27,6 +27,7 @@ private:
     std::unique_ptr<FunctionASTNode> parseDefinition();
     std::unique_ptr<PrototypeASTNode> parseExtern();
     std::unique_ptr<FunctionASTNode> parseTopLevelExpr();
+    std::unique_ptr<ASTNode> ParseIfExpr();
     llvm::ExitOnError ExitOnErr;
     void InitializeModulesAndManagers();
     void HandleDefinition();

@@ -140,7 +140,12 @@ std::unique_ptr<ASTNode> Parser::parsePrimary() {
         return parseNumberExpr();
     case Token::Kind::LeftParen:
         return parseParenExpr();
-    
+    case Token::Kind::Keyword:
+        if (curTok.lexeme() == "if")
+        {
+            return ParseIfExpr();
+        }
+        return logError("CAUTION: Everything other than the if statement is not implemented. Expecting an if statement therefore");
     default:
         return logError("unknown token when expecting a expression");
     }
@@ -242,6 +247,43 @@ std::unique_ptr<FunctionASTNode> Parser::parseTopLevelExpr() {
         return std::make_unique<FunctionASTNode>(std::move(Proto), std::move(E));
     }
     return nullptr;
+}
+
+std::unique_ptr<ASTNode> Parser::ParseIfExpr() {
+    getNextToken();
+
+    auto Cond = parseExpression();
+    if (!Cond)
+    {
+        return nullptr;
+    }
+
+    if (curTok.lexeme() != "then")
+    {
+        return logError("Expected then");
+    }
+    getNextToken();
+
+    auto Then = parseExpression();
+    if (!Then)
+    {
+        return nullptr;
+    }
+    
+    if (curTok.lexeme() != "else")
+    {
+        return logError("expected else");
+    }
+    
+    getNextToken();
+
+    auto Else = parseExpression();
+    if (!Else)
+    {
+        return nullptr;
+    }
+    
+    return std::make_unique<IfExprAST>(std::move(Cond), std::move(Then), std::move(Else));
 }
 
 int Parser::getTokenPrecedence() {

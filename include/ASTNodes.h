@@ -104,4 +104,14 @@ class FunctionASTNode : public ASTNode {
         llvm::Function* codegen() override;
 };
 
+class IfExprAST : public ASTNode
+{
+private:
+    std::unique_ptr<ASTNode> Cond, Then, Else;
+public:
+    IfExprAST(std::unique_ptr<ASTNode> Cond, std::unique_ptr<ASTNode> Then, std::unique_ptr<ASTNode> Else);
+    //~IfExprAST();
+    llvm::Value* codegen() override;
+};
+
 #endif

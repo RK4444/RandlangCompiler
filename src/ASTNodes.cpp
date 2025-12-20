@@ -33,6 +33,9 @@ const std::string& PrototypeASTNode::getName() const {
 
 FunctionASTNode:: FunctionASTNode(std::unique_ptr<PrototypeASTNode> prototype, std::unique_ptr<ASTNode> Body) : proto(std::move(prototype)), body(std::move(Body)) {}
 
+
+IfExprAST::IfExprAST(std::unique_ptr<ASTNode> Cond, std::unique_ptr<ASTNode> Then, std::unique_ptr<ASTNode> Else) : Cond(std::move(Cond)), Then(std::move(Then)), Else(std::move(Else)) {}
+
 llvm::Value* NumberASTNode::codegen() {
     return llvm::ConstantFP::get(*TheContext, llvm::APFloat(val));
 }
@@ -148,6 +151,56 @@ llvm::Function* FunctionASTNode::codegen() {
 
     TheFunction->eraseFromParent();
     return nullptr;
+}
+
+llvm::Value* IfExprAST::codegen() {
+    llvm::Value* CondV = Cond->codegen();
+    if (!CondV)
+    {
+        return nullptr;
+    }
+
+    CondV = Builder->CreateFCmpONE(CondV, llvm::ConstantFP::get(*TheContext, llvm::APFloat(0.0)), "ifcond");
+
+    llvm::Function* TheFunction = Builder->GetInsertBlock()->getParent();
+
+    llvm::BasicBlock* ThenBB = llvm::BasicBlock::Create(*TheContext, "then", TheFunction);
+    llvm::BasicBlock* ElseBB = llvm::BasicBlock::Create(*TheContext, "else");
+    llvm::BasicBlock* MergeBB = llvm::BasicBlock::Create(*TheContext, "ifcont");
+
+    Builder->CreateCondBr(CondV, ThenBB, ElseBB);
+
+    Builder->SetInsertPoint(ThenBB);
+
+    llvm::Value* ThenV = Then->codegen();
+    if (!ThenV)
+    {
+        return nullptr;
+    }
+    
+    Builder->CreateBr(MergeBB);
+
+    ThenBB = Builder->GetInsertBlock();
+
+    TheFunction->insert(TheFunction->end(), ElseBB);
+    Builder->SetInsertPoint(ElseBB);
+
+    llvm::Value* ElseV = Else->codegen();
+    if (!ElseV)
+    {
+        return nullptr;
+    }
+    
+    Builder->CreateBr(MergeBB);
+    ElseBB = Builder->GetInsertBlock();
+
+    TheFunction->insert(TheFunction->end(), MergeBB);
+    Builder->SetInsertPoint(MergeBB);
+    llvm::PHINode* PN = Builder->CreatePHI(llvm::Type::getDoubleTy(*TheContext), 2, "iftmp");
+
+    PN->addIncoming(ThenV, ThenBB);
+    PN->addIncoming(ElseV, ElseBB);
+    return PN;
 }
 
 llvm::Value* ASTNode::vLogError(const char *str){
