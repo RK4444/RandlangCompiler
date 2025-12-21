@@ -1,12 +1,15 @@
 #include "../include/Token.hpp"
 #include "../include/Lexer.h"
 
+int linenumber = 0;
+
 bool is_space(char c) noexcept {
   switch (c) {
+    case '\n':
+      ++linenumber;
     case ' ':
     case '\t':
     case '\r':
-    case '\n':
       return true;
     default:
       return false;
@@ -106,6 +109,8 @@ Token Lexer::atom(Token::Kind kind) noexcept { return Token(kind, m_beg++, 1); }
 
 Token Lexer::next() noexcept {
   while (is_space(peek())) get();
+
+  //currentLineNumber = linenumber;
 
   switch (peek()) {
     case '\0':
@@ -259,3 +264,11 @@ Token Lexer::slash_or_comment() noexcept {
     return Token(Token::Kind::Slash, start, 1);
   }
 }
+
+// int Lexer::getCurrentLineNumber() {
+//   return currentLineNumber;
+// }
+
+// void Lexer::incrementCurrentLineNumber() {
+//   ++currentLineNumber;
+// }

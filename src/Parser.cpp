@@ -72,12 +72,18 @@ Token Parser::getNextToken() {
     //std::cout << curTok.lexeme() << std::endl;
 }
 
-std::unique_ptr<ASTNode> Parser::logError(const char* str){
-    std::cerr << str << std::endl;
+std::unique_ptr<ASTNode> Parser::logError(const char* str, int linenumber=0){
+    if (linenumber == 0)
+    {
+        std::cerr << str << std::endl;
+    } else {
+        std::cerr << str << " in Line: " << linenumber << std::endl;
+    }
+    
     return nullptr;
 }
-std::unique_ptr<PrototypeASTNode> Parser::pLogError(const char* str) {
-    logError(str);
+std::unique_ptr<PrototypeASTNode> Parser::pLogError(const char* str, int linenumber=0) {
+    logError(str, linenumber);
     return nullptr;
 }
 
@@ -114,20 +120,46 @@ std::unique_ptr<ASTNode> Parser::parseIdentifierExpr() {
 
     
     std::vector<std::unique_ptr<ASTNode>> args;
-    while (getNextToken().kind() != Token::Kind::LeftParen)
+    if (getNextToken().kind() != Token::Kind::RightParen)
     {
-        if (auto arg = parseExpression()) {
-            args.push_back(std::move(arg));
-        } else {
-            return nullptr;
+        while (true)
+        {
+            if (auto Arg = parseExpression())
+            {
+                args.push_back(std::move(Arg));
+            } else {
+                return nullptr;
+            }
+            
+            if (curTok.kind() == Token::Kind::RightParen)
+            {
+                break;
+            }
+            
+            if (curTok.kind() != Token::Kind::Comma)
+            {
+                return logError("Expected ')' or ',' in argument list");
+            }
+            getNextToken();
         }
-
-        if (curTok.kind() != Token::Kind::Comma) {
-            return logError("Expected ')' or ',' in argument list");
-        }
-        getNextToken();
+        
     }
+    
+    // while (getNextToken().kind() != Token::Kind::LeftParen)
+    // {
+    //     if (auto arg = parseExpression()) {
+    //         args.push_back(std::move(arg));
+    //     } else {
+    //         return nullptr;
+    //     }
+
+    //     if (curTok.kind() != Token::Kind::Comma) {
+    //         return logError("Expected ')' or ',' in argument list");
+    //     }
+    //     getNextToken();
+    // }
     //std::cout << "Parsed function call" << std::endl;
+    getNextToken();
     return std::make_unique<CallASTNode>(idName, std::move(args));
 }
 
@@ -243,8 +275,14 @@ std::unique_ptr<PrototypeASTNode> Parser::parseExtern() {
 std::unique_ptr<FunctionASTNode> Parser::parseTopLevelExpr() {
     if (auto E = parseExpression())
     {
-        auto Proto = std::make_unique<PrototypeASTNode>("", std::vector<std::string>());
-        return std::make_unique<FunctionASTNode>(std::move(Proto), std::move(E));
+        if (curTok.lexeme() == "main")
+        {
+            auto Proto = std::make_unique<PrototypeASTNode>("main", std::vector<std::string>());
+            return std::make_unique<FunctionASTNode>(std::move(Proto), std::move(E));
+        } else {
+            auto Proto = std::make_unique<PrototypeASTNode>("", std::vector<std::string>());
+            return std::make_unique<FunctionASTNode>(std::move(Proto), std::move(E));
+        } 
     }
     return nullptr;
 }

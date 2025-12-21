@@ -37,14 +37,19 @@ class Lexer {
 
   Token next() noexcept;
 
- private:
+  // int getCurrentLineNumber();
+  // void incrementCurrentLineNumber();
+  
+  private:
   Token identifier() noexcept;
   Token number() noexcept;
   Token slash_or_comment() noexcept;
   Token atom(Token::Kind) noexcept;
-
+  
   char peek() const noexcept { return *m_beg; }
   char get() noexcept { return *m_beg++; }
+  
+  // static int currentLineNumber; //TODO: Fix this mess
 
   const char* m_beg = nullptr;
 };

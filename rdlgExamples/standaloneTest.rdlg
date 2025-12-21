@@ -1,0 +1,7 @@
+fn sum(a b)
+    a + b;
+
+extern println();
+
+fn main(argc)
+    println();
