@@ -33,11 +33,12 @@
 
 class Lexer {
  public:
-  Lexer(const char* beg) noexcept : m_beg{beg} {}
+  Lexer(const char* beg) noexcept : m_beg{beg} { linenumber = 1; col = 1;}
 
   Token next() noexcept;
 
-  // int getCurrentLineNumber();
+  int getCurrentLineNumber();
+  int getCol();
   // void incrementCurrentLineNumber();
   
   private:
@@ -45,7 +46,11 @@ class Lexer {
   Token number() noexcept;
   Token slash_or_comment() noexcept;
   Token atom(Token::Kind) noexcept;
-  
+  bool is_space(char c) noexcept;
+  bool is_digit(char c) noexcept;
+  bool is_identifier_char(char c) noexcept;
+  int linenumber;
+  int col;
   char peek() const noexcept { return *m_beg; }
   char get() noexcept { return *m_beg++; }
   

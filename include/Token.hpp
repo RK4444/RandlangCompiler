@@ -62,6 +62,7 @@ class Token {
     DoubleQuote,
     Comment,
     Pipe,
+    Tilda,
     End,
     Unexpected,
   };

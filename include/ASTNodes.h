@@ -114,4 +114,17 @@ public:
     llvm::Value* codegen() override;
 };
 
+class ForExprAST : public ASTNode
+{
+private:
+    std::string VarName;
+    std::unique_ptr<ASTNode> Start, End, Step, Body;
+public:
+    ForExprAST(const std::string &VarName, std::unique_ptr<ASTNode> Start,
+        std::unique_ptr<ASTNode> End, std::unique_ptr<ASTNode> Step, std::unique_ptr<ASTNode> Body);
+
+    llvm::Value* codegen() override;
+};
+
+
 #endif

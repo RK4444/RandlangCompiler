@@ -1,22 +1,24 @@
 #include "../include/Token.hpp"
 #include "../include/Lexer.h"
 
-int linenumber = 0;
 
-bool is_space(char c) noexcept {
+bool Lexer::is_space(char c) noexcept {
   switch (c) {
     case '\n':
-      ++linenumber;
-    case ' ':
-    case '\t':
     case '\r':
+      ++linenumber;
+      col = 0;
+      return true;
+    case '\t':
+    case ' ':
+      ++col;
       return true;
     default:
       return false;
   }
 }
 
-bool is_digit(char c) noexcept {
+bool Lexer::is_digit(char c) noexcept {
   switch (c) {
     case '0':
     case '1':
@@ -34,7 +36,7 @@ bool is_digit(char c) noexcept {
   }
 }
 
-bool is_identifier_char(char c) noexcept {
+bool Lexer::is_identifier_char(char c) noexcept {
   switch (c) {
     case 'a':
     case 'b':
@@ -223,6 +225,8 @@ Token Lexer::next() noexcept {
       return atom(Token::Kind::DoubleQuote);
     case '|':
       return atom(Token::Kind::Pipe);
+    case '~':
+      return atom(Token::Kind::Tilda);
   }
 }
 
@@ -232,7 +236,8 @@ Token Lexer::identifier() noexcept {
   while (is_identifier_char(peek())) get();
   std::string_view kwidentifier(start, std::distance(start, m_beg));
   if (kwidentifier == "void" || kwidentifier == "int" || kwidentifier == "double" || kwidentifier == "float" || kwidentifier == "for" || kwidentifier == "while" ||
-   kwidentifier == "if" || kwidentifier == "else" || kwidentifier == "return" || kwidentifier == "string" || kwidentifier == "extern" || kwidentifier == "fn" || kwidentifier == "then")
+   kwidentifier == "if" || kwidentifier == "else" || kwidentifier == "return" || kwidentifier == "string" || kwidentifier == "extern" || kwidentifier == "fn" || kwidentifier == "then" ||
+  kwidentifier == "in")
   {
    return Token(Token::Kind::Keyword, start, m_beg);
   }
@@ -265,9 +270,13 @@ Token Lexer::slash_or_comment() noexcept {
   }
 }
 
-// int Lexer::getCurrentLineNumber() {
-//   return currentLineNumber;
-// }
+int Lexer::getCurrentLineNumber() {
+  return linenumber;
+}
+
+int Lexer::getCol(){
+  return col;
+}
 
 // void Lexer::incrementCurrentLineNumber() {
 //   ++currentLineNumber;

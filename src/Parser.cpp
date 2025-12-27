@@ -103,7 +103,7 @@ std::unique_ptr<ASTNode> Parser::parseParenExpr() {
     }
 
     if (curTok.kind() != Token::Kind::RightParen) {
-        return logError("expected ')'");
+        return logError("expected ')'", lex.getCurrentLineNumber());
     }
     getNextToken();
     //std::cout << "Parsed parentese expression" << std::endl;
@@ -138,7 +138,7 @@ std::unique_ptr<ASTNode> Parser::parseIdentifierExpr() {
             
             if (curTok.kind() != Token::Kind::Comma)
             {
-                return logError("Expected ')' or ',' in argument list");
+                return logError("Expected ')' or ',' in argument list", lex.getCurrentLineNumber());
             }
             getNextToken();
         }
@@ -176,10 +176,13 @@ std::unique_ptr<ASTNode> Parser::parsePrimary() {
         if (curTok.lexeme() == "if")
         {
             return ParseIfExpr();
+        } else if (curTok.lexeme() == "for")
+        {
+            return ParseForExpr();
         }
-        return logError("CAUTION: Everything other than the if statement is not implemented. Expecting an if statement therefore");
+        return logError("CAUTION: Everything other than the if and for statements are not implemented. Expecting an if or for statement therefore", lex.getCurrentLineNumber());
     default:
-        return logError("unknown token when expecting a expression");
+        return logError("unknown token when expecting a expression", lex.getCurrentLineNumber());
     }
 }
 
@@ -225,25 +228,25 @@ std::unique_ptr<ASTNode> Parser::parseBinOpRHS(int exprPrec, std::unique_ptr<AST
 
 std::unique_ptr<PrototypeASTNode> Parser::parsePrototype() {
     if (curTok.kind() != Token::Kind::Identifier) {
-        return pLogError("Expected function name in prototype");
+        return pLogError("Expected function name in prototype", lex.getCurrentLineNumber());
     }
     std::string fnName = std::string(curTok.lexeme());
     
 
     if (getNextToken().kind() != Token::Kind::LeftParen) {
-        return pLogError("Expected '(' in prototype");
+        return pLogError("Expected '(' in prototype", lex.getCurrentLineNumber());
     }
 
     std::vector<std::string> argNames;
     
-    while (getNextToken().kind() == Token::Kind::Identifier) //TODO: Check if this works every time
+    while (getNextToken().kind() == Token::Kind::Identifier)
     {
         argNames.push_back(std::string(curTok.lexeme()));
         //getNextToken();
     }
     if (curTok.kind() != Token::Kind::RightParen)
     {
-        return pLogError("Expected ')' in prototype");
+        return pLogError("Expected ')' in prototype", lex.getCurrentLineNumber());
     }
     
     getNextToken();
@@ -298,7 +301,7 @@ std::unique_ptr<ASTNode> Parser::ParseIfExpr() {
 
     if (curTok.lexeme() != "then")
     {
-        return logError("Expected then");
+        return logError("Expected then", lex.getCurrentLineNumber());
     }
     getNextToken();
 
@@ -310,7 +313,7 @@ std::unique_ptr<ASTNode> Parser::ParseIfExpr() {
     
     if (curTok.lexeme() != "else")
     {
-        return logError("expected else");
+        return logError("expected else", lex.getCurrentLineNumber());
     }
     
     getNextToken();
@@ -324,7 +327,66 @@ std::unique_ptr<ASTNode> Parser::ParseIfExpr() {
     return std::make_unique<IfExprAST>(std::move(Cond), std::move(Then), std::move(Else));
 }
 
-int Parser::getTokenPrecedence() {
+std::unique_ptr<ASTNode> Parser::ParseForExpr() {
+    if (getNextToken().kind() != Token::Kind::Identifier)
+    {
+        return logError("Expected identifier after for", lex.getCurrentLineNumber());
+    }
+
+    std::string idName = std::string(curTok.lexeme());
+    
+    if (getNextToken().kind() != Token::Kind::Equal)
+    {
+        logError("Expected '=' after for", lex.getCurrentLineNumber());
+    }
+
+    getNextToken();
+    auto Start = parseExpression();
+    if (!Start)
+    {
+        return nullptr;
+    }
+
+    if (curTok.kind() != Token::Kind::Comma)
+    {
+        logError("expected ',' after for start value", lex.getCurrentLineNumber());
+    }
+
+    getNextToken();
+    auto End = parseExpression();
+    
+    if (!End)
+    {
+        return nullptr;
+    }
+
+    std::unique_ptr<ASTNode> Step;
+    if (curTok.kind() == Token::Kind::Comma)
+    {
+        getNextToken();
+        Step = parseExpression();
+        if (!Step)
+        {
+            return nullptr;
+        }
+    }
+    
+    if (curTok.lexeme() != "in")
+    {
+        return logError("Expected 'in' after for", lex.getCurrentLineNumber());
+    }
+
+    getNextToken();
+    auto Body = parseExpression();
+    if (!Body)
+    {
+        return nullptr;
+    }
+    
+    return std::make_unique<ForExprAST>(idName, std::move(Start), std::move(End), std::move(Step), std::move(Body));
+}
+
+int Parser::getTokenPrecedence() { 
     if (!isascii((char)*curTok.lexeme().begin())) {
         return -1;
     }
