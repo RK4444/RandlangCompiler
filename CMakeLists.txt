@@ -5,9 +5,14 @@ set(CMAKE_C_COMPILER clang-18)
 set(CMAKE_CXX_COMPILER clang++-18)
 set(CMAKE_CXX_STANDARD 17)
 set(STANDARD_REQUIRED True)
+# set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+# set(CMAKE_EXE_LINKER_FLAGS "-static-libgcc -static-libstdc++")#just with -static doesn't seem to work
+# -static-libgcc -static-libstdc++: use these instead possibly
+# set(BUILD_SHARED_LIBS OFF)
 
 find_package(ZLIB REQUIRED)
 find_package(zstd REQUIRED)
+# set(zstd_USE_STATIC_LIBS ON)
 
 find_package(LLVM REQUIRED CONFIG)
 
@@ -33,3 +38,4 @@ llvm_map_components_to_libnames(llvm_libs
     ${LLVM_TARGETS_TO_BUILD})
 
 target_link_libraries(randlang ${LLVM_SYSTEM_LIBS} ${llvm_libs})
+# target_link_options(randlang PRIVATE -static)

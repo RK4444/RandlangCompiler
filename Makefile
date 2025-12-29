@@ -1,6 +1,6 @@
 GXX_COMPILER=clang++
 C_FLAGS=$(shell llvm-config --cxxflags) -Wall -Wpedantic
-L_FLAGS=$(shell llvm-config --cxxflags --ldflags --system-libs --libs all)
+L_FLAGS=$(shell llvm-config --cxxflags --ldflags --system-libs --libs all) -static
 
 SRC_DIR = src
 INCLUDE_DIR = include

@@ -50,5 +50,6 @@
         "fstream": "cpp",
         "map": "cpp",
         "xtree": "cpp"
-    }
+    },
+    "makefile.configureOnOpen": true
 }
