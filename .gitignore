@@ -3,4 +3,6 @@ build2
 build3
 rdlgExamples/*.o
 rdlgExamples/*Main*
+rdlgExamples/mandel.out
+rdlgExamples/mandelTest
 main

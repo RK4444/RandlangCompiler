@@ -100,9 +100,17 @@ std::unique_ptr<PrototypeASTNode> Parser::pLogError(const char* str, int linenum
 }
 
 std::unique_ptr<ASTNode> Parser::parseNumberExpr() {
-    double val = std::stod(std::string(curTok.lexeme()));
+    std::string finalNumber(std::string(curTok.lexeme()));
+    double val = 0;
+    if (getNextToken().is(Token::Kind::Dot))
+    {
+        finalNumber += ".";
+        finalNumber += std::string(getNextToken().lexeme());
+        getNextToken();
+    }
+    
+    val = std::stod(finalNumber);
     auto Result = std::make_unique<NumberASTNode>(val);
-    getNextToken();
     //std::cout << "Parsed number" << std::endl;
     return std::move(Result);
 }
