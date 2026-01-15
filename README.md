@@ -11,9 +11,7 @@ mkdir build2
 make
 ```
 
-The folder `build2` is for `make` only, since `build` is for `cmake` configuration (currently not working).
-
-If you prefer `cmake`, use
+The folder `build2` is for `make` only, since `build` is for `cmake` configuration. The difference here is, that `make` produces a statically linked binary with no debug symbols (`make` didn't let me add for some reason) and the `cmake` version is dynamically linked and contains debug symbols (`cmake` didn't let me link the binary statically for some reason). If you know, what the problem is, feel free to open and issue in the issues page.
 
 ```
 mkdir build && cd build
