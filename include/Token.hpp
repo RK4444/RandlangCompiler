@@ -32,7 +32,7 @@
 #include <string_view>
 #include <iomanip>
 #include <iostream>
-
+#include <map>
 
 class Token {
  public:
@@ -67,15 +67,49 @@ class Token {
     Unexpected,
   };
 
-  Token(Kind kind) noexcept : m_kind{kind} {}
+  enum class KeywordType {
+    None,
+    For,
+    While,
+    If,
+    Then,
+    Else,
+    Return,
+    Extern,
+    Fn,
+    In,
+    Unary,
+    Binary,
+  };
+
+  Token(Kind kind) noexcept : m_kind{kind}, m_type(KeywordType::None) {}
 
   Token(Kind kind, const char* beg, std::size_t len) noexcept
-      : m_kind{kind}, m_lexeme(beg, len) {}
+      : m_kind{kind}, m_lexeme(beg, len) {
+        constructKeywordMap();
+        if (kind == Kind::Keyword)
+        {
+          m_type = keywordTypeMap[m_lexeme];
+        } else {
+          m_type = keywordTypeMap["None"];
+        }
+        
+      }
 
   Token(Kind kind, const char* beg, const char* end) noexcept
-      : m_kind{kind}, m_lexeme(beg, std::distance(beg, end)) {}
+      : m_kind{kind}, m_lexeme(beg, std::distance(beg, end)) {
+        constructKeywordMap();
+        if (kind == Kind::Keyword)
+        {
+          m_type = keywordTypeMap[m_lexeme];
+        } else {
+          m_type = keywordTypeMap["None"];
+        }
+      }
 
   Kind kind() const noexcept { return m_kind; }
+
+  KeywordType type() const noexcept { return m_type; }
 
   void kind(Kind kind) noexcept { m_kind = kind; }
 
@@ -111,7 +145,24 @@ class Token {
 
  private:
   Kind             m_kind{};
+  KeywordType m_type{};
+  std::map<std::string_view, KeywordType> keywordTypeMap;
   std::string_view m_lexeme{};
+
+  void constructKeywordMap() {
+    keywordTypeMap["None"] = KeywordType::None;
+    keywordTypeMap["for"] = KeywordType::For;
+    keywordTypeMap["while"] = KeywordType::While;
+    keywordTypeMap["if"] = KeywordType::If;
+    keywordTypeMap["then"] = KeywordType::Then;
+    keywordTypeMap["else"] = KeywordType::Else;
+    keywordTypeMap["return"] = KeywordType::Return;
+    keywordTypeMap["extern"] = KeywordType::Extern;
+    keywordTypeMap["fn "] = KeywordType::Fn;
+    keywordTypeMap["in"] = KeywordType::In;
+    keywordTypeMap["unary"] = KeywordType::Unary;
+    keywordTypeMap["binary"] = KeywordType::Binary;
+  }
 };
 
 #endif

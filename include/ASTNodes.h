@@ -35,13 +35,13 @@ class ASTNode { //is named ExprAST in LLVM tutorial
         static std::unique_ptr<llvm::IRBuilder<>> Builder;
         static std::unique_ptr<llvm::Module> TheModule;
         static std::map<std::string, llvm::Value *> NamedValues;
-        // static std::unique_ptr<llvm::FunctionPassManager> TheFPM; // interpreter only
-        // static std::unique_ptr<llvm::LoopAnalysisManager> TheLAM;
-        // static std::unique_ptr<llvm::FunctionAnalysisManager> TheFAM;
-        // static std::unique_ptr<llvm::CGSCCAnalysisManager> TheCGAM;
-        // static std::unique_ptr<llvm::ModuleAnalysisManager> TheMAM;
-        // static std::unique_ptr<llvm::PassInstrumentationCallbacks> ThePIC;
-        // static std::unique_ptr<llvm::StandardInstrumentations> TheSI;
+        static std::unique_ptr<llvm::FunctionPassManager> TheFPM;
+        static std::unique_ptr<llvm::LoopAnalysisManager> TheLAM;
+        static std::unique_ptr<llvm::FunctionAnalysisManager> TheFAM;
+        static std::unique_ptr<llvm::CGSCCAnalysisManager> TheCGAM;
+        static std::unique_ptr<llvm::ModuleAnalysisManager> TheMAM;
+        static std::unique_ptr<llvm::PassInstrumentationCallbacks> ThePIC;
+        static std::unique_ptr<llvm::StandardInstrumentations> TheSI;
         llvm::Value* vLogError(const char *str);
 };
 
@@ -87,21 +87,29 @@ class PrototypeASTNode : public ASTNode {
     private:
         std::string name;
         std::vector<std::string> args;
+        bool isOperator;
+        unsigned Precedence;
 
     public:
-        PrototypeASTNode(const std::string& Name, std::vector<std::string> arguments);
+        PrototypeASTNode(const std::string& Name, std::vector<std::string> arguments, bool isOperator=false, unsigned Prec=0);
         const std::string& getName() const;
         llvm::Function* codegen() override;
+        bool isUnaryOp() const;
+        bool isBinaryOP() const;
+        char getOperatorName() const;
+        unsigned getBinaryPrecedence() const;
 };
 
 class FunctionASTNode : public ASTNode {
     private:
         std::unique_ptr<PrototypeASTNode> proto;
         std::unique_ptr<ASTNode> body;
-
-    public:
+        //std::map<char, int> BinopPrecedence;
+        public:
+        static std::map<std::string, std::unique_ptr<PrototypeASTNode>> FunctionProtos;
         FunctionASTNode(std::unique_ptr<PrototypeASTNode> prototype, std::unique_ptr<ASTNode> Body);
         llvm::Function* codegen() override;
+        static llvm::Function* getFunction(std::string Name);
 };
 
 class IfExprAST : public ASTNode
@@ -125,6 +133,18 @@ public:
 
     llvm::Value* codegen() override;
 };
+
+class UnaryExprAst : public ASTNode
+{
+private:
+    char Opcode;
+    std::unique_ptr<ASTNode> Operand;
+public:
+    UnaryExprAst(char Opcode, std::unique_ptr<ASTNode> Operand);
+
+    llvm::Value* codegen() override;
+};
+
 
 
 #endif

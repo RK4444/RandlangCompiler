@@ -10,8 +10,8 @@ set(STANDARD_REQUIRED True)
 # -static-libgcc -static-libstdc++: use these instead possibly
 # set(BUILD_SHARED_LIBS OFF)
 
-find_package(ZLIB REQUIRED)
-find_package(zstd REQUIRED)
+# find_package(ZLIB REQUIRED)
+# find_package(zstd REQUIRED)
 # set(zstd_USE_STATIC_LIBS ON)
 
 find_package(LLVM REQUIRED CONFIG)

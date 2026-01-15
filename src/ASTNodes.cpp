@@ -16,6 +16,15 @@ std::unique_ptr<llvm::LLVMContext> ASTNode::TheContext = nullptr;
 std::unique_ptr<llvm::IRBuilder<>> ASTNode::Builder = nullptr;
 std::unique_ptr<llvm::Module> ASTNode::TheModule = nullptr;
 std::map<std::string, llvm::Value *> ASTNode::NamedValues;
+std::map<std::string, std::unique_ptr<PrototypeASTNode>> FunctionASTNode::FunctionProtos;
+
+std::unique_ptr<llvm::FunctionPassManager> ASTNode::TheFPM = nullptr;
+std::unique_ptr<llvm::LoopAnalysisManager> ASTNode::TheLAM = nullptr;
+std::unique_ptr<llvm::FunctionAnalysisManager> ASTNode::TheFAM = nullptr;
+std::unique_ptr<llvm::CGSCCAnalysisManager> ASTNode::TheCGAM = nullptr;
+std::unique_ptr<llvm::ModuleAnalysisManager> ASTNode::TheMAM = nullptr;
+std::unique_ptr<llvm::PassInstrumentationCallbacks> ASTNode::ThePIC = nullptr;
+std::unique_ptr<llvm::StandardInstrumentations> ASTNode::TheSI = nullptr;
 
 NumberASTNode::NumberASTNode(double value) : val(value) {}
 
@@ -25,11 +34,28 @@ BinaryASTNode::BinaryASTNode(char Op, std::unique_ptr<ASTNode> LHS, std::unique_
 
 CallASTNode::CallASTNode(const std::string& Callee, std::vector<std::unique_ptr<ASTNode>> arguments) : callee(Callee), args(std::move(arguments)) {}
 
-PrototypeASTNode:: PrototypeASTNode(const std::string& Name, std::vector<std::string> arguments) : name(Name), args(std::move(arguments)) {}
+PrototypeASTNode:: PrototypeASTNode(const std::string& Name, std::vector<std::string> arguments, bool isOperator, unsigned Prec) : name(Name), args(std::move(arguments)), isOperator(isOperator), Precedence(Prec) {}
 
 const std::string& PrototypeASTNode::getName() const {
     return name;
 };
+
+bool PrototypeASTNode::isUnaryOp() const {
+    return isOperator && args.size() == 1;
+}
+
+bool PrototypeASTNode::isBinaryOP() const {
+    return isOperator && args.size() == 2;
+}
+
+char PrototypeASTNode::getOperatorName() const {
+    assert(isUnaryOp() || isBinaryOP());
+    return name[name.size() - 1];
+}
+
+unsigned PrototypeASTNode::getBinaryPrecedence() const {
+    return Precedence;
+}
 
 FunctionASTNode:: FunctionASTNode(std::unique_ptr<PrototypeASTNode> prototype, std::unique_ptr<ASTNode> Body) : proto(std::move(prototype)), body(std::move(Body)) {}
 
@@ -44,6 +70,11 @@ ForExprAST::ForExprAST(const std::string &VarName, std::unique_ptr<ASTNode> Star
     std::unique_ptr<ASTNode> End, std::unique_ptr<ASTNode> Step, std::unique_ptr<ASTNode> Body) : VarName(VarName), Start(std::move(Start)), End(std::move(End)), Step(std::move(Step)), Body(std::move(Body))
 {
 }
+
+UnaryExprAst::UnaryExprAst(char Opcode, std::unique_ptr<ASTNode> Operand) : Opcode(Opcode), Operand(std::move(Operand))
+{
+}
+
 
 llvm::Value* VariableASTNode::codegen() {
     std::string variableName = varName;
@@ -79,8 +110,14 @@ llvm::Value* BinaryASTNode::codegen() {
         return ASTNode::Builder->CreateUIToFP(L, llvm::Type::getDoubleTy(*TheContext), "booltmp");
     
     default:
-        return vLogError("invalid binary operator");
+        break;;
     }
+
+    llvm::Function* F = FunctionASTNode::getFunction(std::string("binary") + op);
+    assert(F && "binary operator not found!");
+
+    llvm::Value* Ops[2] = {L, R};
+    return Builder->CreateCall(F, Ops, "binop");
 }
 
 llvm::Value* CallASTNode::codegen() {
@@ -125,20 +162,27 @@ llvm::Function* PrototypeASTNode::codegen() {
 }
 
 llvm::Function* FunctionASTNode::codegen() {
-    llvm::Function* TheFunction = TheModule->getFunction(proto->getName());
+    // llvm::Function* TheFunction = TheModule->getFunction(proto->getName());
 
-    if(!TheFunction) {
-        TheFunction = proto->codegen();
-    }
+    // if(!TheFunction) {
+    //     TheFunction = proto->codegen();
+    // }
 
-    if(!TheFunction) {
+    // if(!TheFunction) {
+    //     return nullptr;
+    // }
+
+    // if(!TheFunction->empty()) {
+    //     return (llvm::Function*) vLogError("Function cannot be redefined");
+    // }
+    auto &P = *proto;
+    FunctionProtos[proto->getName()] = std::move(proto);
+    llvm::Function* TheFunction = getFunction(P.getName());
+    if (!TheFunction)
+    {
         return nullptr;
     }
-
-    if(!TheFunction->empty()) {
-        return (llvm::Function*) vLogError("Function cannot be redefined");
-    }
-
+    
     llvm::BasicBlock* BB = llvm::BasicBlock::Create(*TheContext, "entry", TheFunction);
     Builder->SetInsertPoint(BB);
 
@@ -150,6 +194,8 @@ llvm::Function* FunctionASTNode::codegen() {
     if(llvm::Value *RetVal = body->codegen()) {
         Builder->CreateRet(RetVal);
         llvm::verifyFunction(*TheFunction);
+
+        TheFPM->run(*TheFunction, *TheFAM);
 
         return TheFunction;
     }
@@ -280,8 +326,39 @@ llvm::Value* ForExprAST::codegen() {
     return llvm::Constant::getNullValue(llvm::Type::getDoubleTy(*TheContext));
 }
 
+llvm::Value* UnaryExprAst::codegen() {
+    llvm::Value* OperandV = Operand->codegen();
+    if (!OperandV)
+    {
+        return nullptr;
+    }
+    
+    llvm::Function* F = FunctionASTNode::getFunction(std::string("unary") + Opcode);
+    if (!F)
+    {
+        return vLogError("Unknown unary operator");
+    }
+    
+    return Builder->CreateCall(F, OperandV, "unop");
+}
+
 
 llvm::Value* ASTNode::vLogError(const char *str){
     std::cout << "Code generation error: " << str << std::endl;
     return nullptr;
+}
+
+llvm::Function* FunctionASTNode::getFunction(std::string Name) {
+  // First, see if the function has already been added to the current module.
+  if (auto *F = TheModule->getFunction(Name))
+    return F;
+
+  // If not, check whether we can codegen the declaration from some existing
+  // prototype.
+  auto FI = FunctionProtos.find(Name);
+  if (FI != FunctionProtos.end())
+    return FI->second->codegen();
+
+  // If no existing prototype exists, return null.
+  return nullptr;
 }

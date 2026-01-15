@@ -18,6 +18,7 @@
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Scalar/Reassociate.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
+#include "llvm/Transforms/Utils/Mem2Reg.h"
 #include "../include/Parser.h"
 #include "../include/Token.hpp"
 #include "../include/Lexer.h"
@@ -55,15 +56,26 @@ void Parser::InitializeModulesAndManagers() {
 
     ASTNode::Builder = std::make_unique<llvm::IRBuilder<>>(*ASTNode::TheContext);
 
-    // ASTNode::TheFPM = std::make_unique<llvm::FunctionPassManager>(); //Interpreter only
-    // ASTNode::TheLAM = std::make_unique<llvm::LoopAnalysisManager>();
-    // ASTNode::TheFAM = std::make_unique<llvm::FunctionAnalysisManager>();
-    // ASTNode::TheCGAM = std::make_unique<llvm::CGSCCAnalysisManager>();
-    // ASTNode::TheMAM = std::make_unique<llvm::ModuleAnalysisManager>();
-    // ASTNode::ThePIC = std::make_unique<llvm::PassInstrumentationCallbacks>();
-    // ASTNode::TheSI = std::make_unique<llvm::StandardInstrumentations>(*ASTNode::TheContext, /*DebugLogging*/ true);
+    ASTNode::TheFPM = std::make_unique<llvm::FunctionPassManager>(); //Interpreter only
+    ASTNode::TheLAM = std::make_unique<llvm::LoopAnalysisManager>();
+    ASTNode::TheFAM = std::make_unique<llvm::FunctionAnalysisManager>();
+    ASTNode::TheCGAM = std::make_unique<llvm::CGSCCAnalysisManager>();
+    ASTNode::TheMAM = std::make_unique<llvm::ModuleAnalysisManager>();
+    ASTNode::ThePIC = std::make_unique<llvm::PassInstrumentationCallbacks>();
+    ASTNode::TheSI = std::make_unique<llvm::StandardInstrumentations>(*ASTNode::TheContext, /*DebugLogging*/ true);
 
-    // ASTNode::TheFPM->addPass(llvm::InstCombinePass());
+    ASTNode::TheSI->registerCallbacks(*ASTNode::ThePIC, ASTNode::TheMAM.get());
+
+    ASTNode::TheFPM->addPass(llvm::PromotePass());
+    ASTNode::TheFPM->addPass(llvm::InstCombinePass());
+    ASTNode::TheFPM->addPass(llvm::ReassociatePass());
+    ASTNode::TheFPM->addPass(llvm::GVNPass());
+    ASTNode::TheFPM->addPass(llvm::SimplifyCFGPass());
+
+    llvm::PassBuilder PB;
+    PB.registerModuleAnalyses(*ASTNode::TheMAM);
+    PB.registerFunctionAnalyses(*ASTNode::TheFAM);
+    PB.crossRegisterProxies(*ASTNode::TheLAM, *ASTNode::TheFAM, *ASTNode::TheCGAM, *ASTNode::TheMAM);
 
 }
 
@@ -187,7 +199,7 @@ std::unique_ptr<ASTNode> Parser::parsePrimary() {
 }
 
 std::unique_ptr<ASTNode> Parser::parseExpression() {
-    auto LHS = parsePrimary();
+    auto LHS = parseUnary();
     if (!LHS) {
         return nullptr;
     }
@@ -196,6 +208,9 @@ std::unique_ptr<ASTNode> Parser::parseExpression() {
 }
 
 std::unique_ptr<ASTNode> Parser::parseBinOpRHS(int exprPrec, std::unique_ptr<ASTNode> LHS) {
+    // for (auto tprec : BinopPrecedence) {
+    //     std::cout << tprec.first << " is: " << tprec.second << "\n";
+    // }
     while (true)
     {
         int tokPrec = getTokenPrecedence();
@@ -208,7 +223,7 @@ std::unique_ptr<ASTNode> Parser::parseBinOpRHS(int exprPrec, std::unique_ptr<AST
         Token binOP = curTok;
         getNextToken();
 
-        auto RHS = parsePrimary();
+        auto RHS = parseUnary();
         if (!RHS) {
             return nullptr;
         }
@@ -227,31 +242,80 @@ std::unique_ptr<ASTNode> Parser::parseBinOpRHS(int exprPrec, std::unique_ptr<AST
 }
 
 std::unique_ptr<PrototypeASTNode> Parser::parsePrototype() {
-    if (curTok.kind() != Token::Kind::Identifier) {
+    std::string FnName;
+    unsigned Kind = 0;
+    unsigned BinaryPrecedence = 30;
+
+    if (curTok.is(Token::Kind::Identifier))
+    {
+        FnName = std::string(curTok.lexeme());
+        Kind = 0;
+        getNextToken();
+    } else if (curTok.is(Token::Kind::Keyword)) {
+        switch (curTok.type())
+        {
+        case Token::KeywordType::Binary:
+            getNextToken();
+            if (!isascii((char)*curTok.lexeme().begin()))
+            {
+                return pLogError("Expected binary operator", lex.getCurrentLineNumber());
+            }
+            FnName = "binary";
+            FnName += (char)*curTok.lexeme().begin();
+            Kind = 2;
+                        
+            if (getNextToken().is(Token::Kind::Number))
+            {
+                int numVal = std::stoi(std::string(curTok.lexeme()));
+                if (numVal < 1 || numVal > 100)
+                {
+                    return pLogError("Invalid precedence: must be 1...100", lex.getCurrentLineNumber());
+                }
+                BinaryPrecedence = numVal;
+                getNextToken();
+            }
+            BinopPrecedence[FnName.back()] = BinaryPrecedence;
+            break;
+        case Token::KeywordType::Unary:
+            getNextToken();
+            if (!isascii((char)*curTok.lexeme().begin()))
+            {
+                return pLogError("Expected unary operator", lex.getCurrentLineNumber());
+            }
+            FnName = "unary";
+            FnName += (char)*curTok.lexeme().begin();
+            Kind = 1;
+            getNextToken();
+            break;
+        default:
+            return pLogError("Expected function name in prototype", lex.getCurrentLineNumber());
+            break;
+        }
+    } else {
         return pLogError("Expected function name in prototype", lex.getCurrentLineNumber());
     }
-    std::string fnName = std::string(curTok.lexeme());
+    
     
 
-    if (getNextToken().kind() != Token::Kind::LeftParen) {
+    if (curTok.is_not(Token::Kind::LeftParen)) {
         return pLogError("Expected '(' in prototype", lex.getCurrentLineNumber());
     }
 
     std::vector<std::string> argNames;
     
-    while (getNextToken().kind() == Token::Kind::Identifier)
+    while (getNextToken().is(Token::Kind::Identifier))
     {
         argNames.push_back(std::string(curTok.lexeme()));
         //getNextToken();
     }
-    if (curTok.kind() != Token::Kind::RightParen)
+    if (curTok.is_not(Token::Kind::RightParen))
     {
         return pLogError("Expected ')' in prototype", lex.getCurrentLineNumber());
     }
     
     getNextToken();
     //std::cout << "Parsed function prototype" << std::endl;
-    return std::make_unique<PrototypeASTNode>(fnName, std::move(argNames));
+    return std::make_unique<PrototypeASTNode>(FnName, std::move(argNames), Kind != 0, BinaryPrecedence);
     
 }
 
@@ -386,12 +450,28 @@ std::unique_ptr<ASTNode> Parser::ParseForExpr() {
     return std::make_unique<ForExprAST>(idName, std::move(Start), std::move(End), std::move(Step), std::move(Body));
 }
 
+std::unique_ptr<ASTNode> Parser::parseUnary() {
+    if (curTok.is_one_of(Token::Kind::Comma, Token::Kind::LeftParen, Token::Kind::Identifier, Token::Kind::Number, Token::Kind::Keyword))
+    {
+        return parsePrimary();
+    }
+    
+    int Opc = (char)*curTok.lexeme().begin();
+    getNextToken();
+    if (auto Operand = parseUnary())
+    {
+        return std::make_unique<UnaryExprAst>(Opc, std::move(Operand));
+    }
+    return nullptr;
+}
+
 int Parser::getTokenPrecedence() { 
     if (!isascii((char)*curTok.lexeme().begin())) {
         return -1;
     }
 
     int tokPrec = BinopPrecedence[(char)*curTok.lexeme().begin()];
+    
     if (tokPrec <= 0) {
         return -1;
     }
@@ -448,6 +528,7 @@ void Parser::HandleExtern() {
         std::cout << "Parsed an extern." << std::endl;
         FnIR->print(llvm::errs());
         std::cout << "\n";
+        FunctionASTNode::FunctionProtos[FnAST->getName()] = std::move(FnAST);
     }
   } else {
     // Skip token for error recovery.
