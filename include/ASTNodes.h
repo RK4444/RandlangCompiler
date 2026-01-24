@@ -34,7 +34,7 @@ class ASTNode { //is named ExprAST in LLVM tutorial
         static std::unique_ptr<llvm::LLVMContext> TheContext;
         static std::unique_ptr<llvm::IRBuilder<>> Builder;
         static std::unique_ptr<llvm::Module> TheModule;
-        static std::map<std::string, llvm::Value *> NamedValues;
+        static std::map<std::string, llvm::AllocaInst*> NamedValues;
         static std::unique_ptr<llvm::FunctionPassManager> TheFPM;
         static std::unique_ptr<llvm::LoopAnalysisManager> TheLAM;
         static std::unique_ptr<llvm::FunctionAnalysisManager> TheFAM;
@@ -42,6 +42,7 @@ class ASTNode { //is named ExprAST in LLVM tutorial
         static std::unique_ptr<llvm::ModuleAnalysisManager> TheMAM;
         static std::unique_ptr<llvm::PassInstrumentationCallbacks> ThePIC;
         static std::unique_ptr<llvm::StandardInstrumentations> TheSI;
+        llvm::AllocaInst* CreateEntryBlockAlloca(llvm::Function* TheFunction, llvm::StringRef VarName);
         llvm::Value* vLogError(const char *str);
 };
 
@@ -61,6 +62,7 @@ class VariableASTNode : public ASTNode {
     public:
         VariableASTNode(const std::string variableName);
         llvm::Value* codegen() override;
+        const std::string& getName() const;
 };
 
 class BinaryASTNode : public ASTNode {
@@ -144,7 +146,5 @@ public:
 
     llvm::Value* codegen() override;
 };
-
-
 
 #endif

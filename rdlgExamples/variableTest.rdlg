@@ -1,0 +1,9 @@
+extern putchard(x);
+
+fn binary:1(x y) y;
+
+fn test(x)
+    putchard(x) : x = 10 : putchard(x);
+
+fn main(argc)
+    test(42) : 0;

@@ -15,7 +15,7 @@
 std::unique_ptr<llvm::LLVMContext> ASTNode::TheContext = nullptr;
 std::unique_ptr<llvm::IRBuilder<>> ASTNode::Builder = nullptr;
 std::unique_ptr<llvm::Module> ASTNode::TheModule = nullptr;
-std::map<std::string, llvm::Value *> ASTNode::NamedValues;
+std::map<std::string, llvm::AllocaInst *> ASTNode::NamedValues;
 std::map<std::string, std::unique_ptr<PrototypeASTNode>> FunctionASTNode::FunctionProtos;
 
 std::unique_ptr<llvm::FunctionPassManager> ASTNode::TheFPM = nullptr;
@@ -26,9 +26,17 @@ std::unique_ptr<llvm::ModuleAnalysisManager> ASTNode::TheMAM = nullptr;
 std::unique_ptr<llvm::PassInstrumentationCallbacks> ASTNode::ThePIC = nullptr;
 std::unique_ptr<llvm::StandardInstrumentations> ASTNode::TheSI = nullptr;
 
+llvm::AllocaInst* ASTNode::CreateEntryBlockAlloca(llvm::Function* TheFunction, llvm::StringRef VarName) {
+    llvm::IRBuilder<> TmpB(&TheFunction->getEntryBlock(), TheFunction->getEntryBlock().begin());
+    return TmpB.CreateAlloca(llvm::Type::getDoubleTy(*TheContext), nullptr, VarName);
+}
+
 NumberASTNode::NumberASTNode(double value) : val(value) {}
 
 VariableASTNode::VariableASTNode(const std::string variableName) : varName(variableName){}
+const std::string& VariableASTNode::getName() const {
+    return varName;
+}
 
 BinaryASTNode::BinaryASTNode(char Op, std::unique_ptr<ASTNode> LHS, std::unique_ptr<ASTNode> RHS) : op(Op), LHS(std::move(LHS)), RHS(std::move(RHS)){}
 
@@ -78,15 +86,41 @@ UnaryExprAst::UnaryExprAst(char Opcode, std::unique_ptr<ASTNode> Operand) : Opco
 
 llvm::Value* VariableASTNode::codegen() {
     std::string variableName = varName;
-    llvm::Value* V = NamedValues[variableName];
+    llvm::AllocaInst* V = NamedValues[variableName];
     if (!V)
     {
         vLogError("Unknown variable name");
     }
-    return V;
+    return Builder->CreateLoad(V->getAllocatedType(), V, varName.c_str());
 }
 
 llvm::Value* BinaryASTNode::codegen() {
+
+    if (op == '=')
+    {
+        VariableASTNode* LHSE = static_cast<VariableASTNode*>(LHS.get());
+        if (!LHSE)
+        {
+            return vLogError("destination of '=' must be a variable");
+        }
+        
+        llvm::Value* Val = RHS->codegen();
+        if (!Val)
+        {
+            return nullptr;
+        }
+        
+        llvm::Value* Variable = NamedValues[LHSE->getName()];
+        if (!Variable)
+        {
+            return vLogError("Unknown variable Name");
+        }
+        
+        Builder->CreateStore(Val, Variable);
+        return Val;
+    }
+    
+
     llvm::Value* L = LHS->codegen();
     llvm::Value* R = RHS->codegen();
     if (!L || !R)
@@ -188,7 +222,10 @@ llvm::Function* FunctionASTNode::codegen() {
 
     NamedValues.clear();
     for(auto& Arg : TheFunction->args()) {
-        NamedValues[std::string(Arg.getName())] = &Arg;
+        // NamedValues[std::string(Arg.getName())] = &Arg;// Before Kaleidoscope Chapter 7 only
+        llvm::AllocaInst* Alloca = CreateEntryBlockAlloca(TheFunction, Arg.getName());
+        Builder->CreateStore(&Arg, Alloca);
+        NamedValues[std::string(Arg.getName())] = Alloca;
     }
 
     if(llvm::Value *RetVal = body->codegen()) {
@@ -255,27 +292,32 @@ llvm::Value* IfExprAST::codegen() {
 }
 
 llvm::Value* ForExprAST::codegen() {
+    llvm::Function* TheFunction = Builder->GetInsertBlock()->getParent();
+    llvm::AllocaInst* Alloca = CreateEntryBlockAlloca(TheFunction, VarName);
+
     llvm::Value* StartVal = Start->codegen();
     if (!StartVal)
     {
         return nullptr;
     }
+
+    Builder->CreateStore(StartVal, Alloca);
     
-    llvm::Function* TheFunction = Builder->GetInsertBlock()->getParent();
-    llvm::BasicBlock* PreheaderBB = Builder->GetInsertBlock();
+    // llvm::Function* TheFunction = Builder->GetInsertBlock()->getParent(); // Before Kaleidoscope Chapter 7 only
+    // llvm::BasicBlock* PreheaderBB = Builder->GetInsertBlock();
     llvm::BasicBlock* LoopBB = llvm::BasicBlock::Create(*TheContext, "loop", TheFunction);
 
     Builder->CreateBr(LoopBB);
 
     Builder->SetInsertPoint(LoopBB);
 
-    llvm::PHINode* Variable = Builder->CreatePHI(llvm::Type::getDoubleTy(*TheContext), 2, VarName);
-    Variable->addIncoming(StartVal, PreheaderBB);
+    // llvm::PHINode* Variable = Builder->CreatePHI(llvm::Type::getDoubleTy(*TheContext), 2, VarName); //Before Kaleidoscope Chapter 7 only
+    // Variable->addIncoming(StartVal, PreheaderBB);
 
     // Within the loop, the variable is defined equal to the PHI node.  If it
     // shadows an existing variable, we have to restore it, so save it now.
-    llvm::Value* oldVal = NamedValues[VarName];
-    NamedValues[VarName] = Variable;
+    llvm::AllocaInst* oldVal = NamedValues[VarName];
+    NamedValues[VarName] = Alloca;
 
     if (!Body->codegen())
     {
@@ -296,23 +338,27 @@ llvm::Value* ForExprAST::codegen() {
         StepVal = llvm::ConstantFP::get(*TheContext, llvm::APFloat(1.0));
     }
     
-    llvm::Value* NextVar = Builder->CreateFAdd(Variable, StepVal, "nextvar");
+    //llvm::Value* NextVar = Builder->CreateFAdd(Variable, StepVal, "nextvar");// Before Kaleidoscope Chapter 7 only
 
     llvm::Value* EndCond = End->codegen();
     if (!EndCond)
     {
         return nullptr;
-    }        
+    }
+
+    llvm::Value* CurVar = Builder->CreateLoad(Alloca->getAllocatedType(), Alloca, VarName.c_str());
+    llvm::Value* NextVar = Builder->CreateFAdd(CurVar, StepVal, "nextvar");
+    Builder->CreateStore(NextVar, Alloca);
     
     EndCond = Builder->CreateFCmpONE(EndCond, llvm::ConstantFP::get(*TheContext, llvm::APFloat(0.0)), "loopcond");
 
-    llvm::BasicBlock* LoopEndBB = Builder->GetInsertBlock();
+    // llvm::BasicBlock* LoopEndBB = Builder->GetInsertBlock(); // Before Kaleidoscope Chapter 7 only
     llvm::BasicBlock* AfterBB = llvm::BasicBlock::Create(*TheContext, "afterloop", TheFunction);
 
     Builder->CreateCondBr(EndCond, LoopBB, AfterBB);
 
     Builder->SetInsertPoint(AfterBB);
-    Variable->addIncoming(NextVar, LoopEndBB);
+    // Variable->addIncoming(NextVar, LoopEndBB); // Before Kaleidoscope Chapter 7 only
 
     //Restore the unshadowed variable
     if (oldVal)
