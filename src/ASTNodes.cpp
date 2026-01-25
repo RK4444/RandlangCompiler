@@ -422,7 +422,7 @@ llvm::Value* VarAstNode::codegen() {
         ASTNode* Init = VarNames[i].second.get();
 
         llvm::Value* InitVal;
-        if (!Init)
+        if (Init)
         {
             InitVal = Init->codegen();
             if (!InitVal)
