@@ -30,6 +30,7 @@ private:
     std::unique_ptr<ASTNode> ParseIfExpr();
     std::unique_ptr<ASTNode> ParseForExpr();
     std::unique_ptr<ASTNode> parseUnary();
+    std::unique_ptr<ASTNode> ParseVarExpr();
     llvm::ExitOnError ExitOnErr;
     void InitializeModulesAndManagers();
     void HandleDefinition();

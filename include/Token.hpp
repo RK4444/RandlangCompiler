@@ -47,8 +47,11 @@ class Token {
     LeftCurly,
     RightCurly,
     LessThan,
+    LessOrEqual,
     GreaterThan,
+    GreaterOrEqual,
     Equal,
+    DoubleEqual,
     Plus,
     Minus,
     Asterisk,
@@ -80,6 +83,7 @@ class Token {
     In,
     Unary,
     Binary,
+    Var,
   };
 
   Token(Kind kind) noexcept : m_kind{kind}, m_type(KeywordType::None) {}
@@ -162,6 +166,7 @@ class Token {
     keywordTypeMap["in"] = KeywordType::In;
     keywordTypeMap["unary"] = KeywordType::Unary;
     keywordTypeMap["binary"] = KeywordType::Binary;
+    keywordTypeMap["var"] = KeywordType::Var;
   }
 };
 

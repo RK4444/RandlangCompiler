@@ -83,6 +83,9 @@ UnaryExprAst::UnaryExprAst(char Opcode, std::unique_ptr<ASTNode> Operand) : Opco
 {
 }
 
+VarAstNode::VarAstNode(std::vector<std::pair<std::string, std::unique_ptr<ASTNode>>> VarNames, std::unique_ptr<ASTNode> Body) : VarNames(std::move(VarNames)), Body(std::move(Body))
+{
+}
 
 llvm::Value* VariableASTNode::codegen() {
     std::string variableName = varName;
@@ -407,4 +410,47 @@ llvm::Function* FunctionASTNode::getFunction(std::string Name) {
 
   // If no existing prototype exists, return null.
   return nullptr;
+}
+
+llvm::Value* VarAstNode::codegen() {
+    std::vector<llvm::AllocaInst*> OldBindings;
+
+    llvm::Function* TheFunction = Builder->GetInsertBlock()->getParent();
+    for (unsigned i = 0, e = VarNames.size(); i != e; i++)
+    {
+        const std::string& VarName = VarNames[i].first;
+        ASTNode* Init = VarNames[i].second.get();
+
+        llvm::Value* InitVal;
+        if (!Init)
+        {
+            InitVal = Init->codegen();
+            if (!InitVal)
+            {
+                return nullptr;
+            }
+            
+        } else {
+            InitVal = llvm::ConstantFP::get(*TheContext, llvm::APFloat(0.0));
+        }
+        
+        llvm::AllocaInst* Alloca = CreateEntryBlockAlloca(TheFunction, VarName);
+        Builder->CreateStore(InitVal, Alloca);
+
+        OldBindings.push_back(NamedValues[VarName]);
+
+        NamedValues[VarName] = Alloca;
+    }
+    
+    llvm::Value* BodyVal = Body->codegen();
+    if (!BodyVal)
+    {
+        return nullptr;
+    }
+    
+    for (unsigned i = 0, e = VarNames.size(); i != e; i++)
+    {
+        NamedValues[VarNames[i].first] = OldBindings[i];
+    }
+    return BodyVal;
 }

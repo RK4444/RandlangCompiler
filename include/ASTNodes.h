@@ -147,4 +147,14 @@ public:
     llvm::Value* codegen() override;
 };
 
+class VarAstNode : public ASTNode
+{
+private:
+    std::vector<std::pair<std::string, std::unique_ptr<ASTNode>>> VarNames;
+    std::unique_ptr<ASTNode> Body;
+public:
+    VarAstNode(std::vector<std::pair<std::string, std::unique_ptr<ASTNode>>> VarNames, std::unique_ptr<ASTNode> Body);
+    llvm::Value* codegen() override;
+};
+
 #endif

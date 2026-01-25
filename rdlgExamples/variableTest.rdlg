@@ -3,7 +3,8 @@ extern putchard(x);
 fn binary:1(x y) y;
 
 fn test(x)
-    putchard(x) : x = 10 : putchard(x);
+    var a = 10 in
+    (putchard(x) : putchard(a));
 
 fn main(argc)
     test(42) : 0;

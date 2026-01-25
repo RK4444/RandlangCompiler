@@ -199,6 +199,8 @@ std::unique_ptr<ASTNode> Parser::parsePrimary() {
         } else if (curTok.lexeme() == "for")
         {
             return ParseForExpr();
+        } else if (curTok.lexeme() == "var") {
+            return ParseVarExpr();
         }
         return logError("CAUTION: Everything other than the if and for statements are not implemented. Expecting an if or for statement therefore", lex.getCurrentLineNumber());
     default:
@@ -471,6 +473,60 @@ std::unique_ptr<ASTNode> Parser::parseUnary() {
         return std::make_unique<UnaryExprAst>(Opc, std::move(Operand));
     }
     return nullptr;
+}
+
+std::unique_ptr<ASTNode> Parser::ParseVarExpr() {
+    getNextToken();
+
+    std::vector<std::pair<std::string, std::unique_ptr<ASTNode>>> VarNames;
+
+    if (curTok.is_not(Token::Kind::Identifier))
+    {
+        return logError("Expected identifier after var", lex.getCurrentLineNumber());
+    }
+    
+    while (true) {
+        std::string Name = std::string(curTok.lexeme());
+        getNextToken();
+
+        std::unique_ptr<ASTNode> Init;
+        if (curTok.is(Token::Kind::Equal))
+        {
+            getNextToken();
+
+            Init = parseExpression();
+            if (!Init)
+            {
+                return nullptr;
+            }
+            
+        }
+        
+        VarNames.push_back(std::make_pair(Name, std::move(Init)));
+        if (curTok.is_not(Token::Kind::Comma))
+        {
+            break;
+        }
+        getNextToken();
+
+        if (curTok.is_not(Token::Kind::Identifier))
+        {
+            return logError("Expected identifier list after var", lex.getCurrentLineNumber());
+        }
+    }
+    
+    if (curTok.type() != Token::KeywordType::In)
+    {
+        return logError("Expected 'in' after 'var'", lex.getCurrentLineNumber());
+    }
+    getNextToken();
+
+    auto Body = parseExpression();
+    if (!Body)
+    {
+        return nullptr;
+    }
+    return std::make_unique<VarAstNode>(std::move(VarNames), std::move(Body));
 }
 
 int Parser::getTokenPrecedence() { 
