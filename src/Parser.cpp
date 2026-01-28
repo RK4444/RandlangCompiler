@@ -184,25 +184,37 @@ std::unique_ptr<ASTNode> Parser::parseIdentifierExpr() {
 }
 
 std::unique_ptr<ASTNode> Parser::parsePrimary() {
-    switch (curTok.kind())
+    //Parse primary parses expression that only can occur inside a function i.e.
+    switch (curTok.kind()) //Decide what to parse after the kind of the token is inspected
     {
     case Token::Kind::Identifier:
-        return parseIdentifierExpr();
+        return parseIdentifierExpr(); //parse an identifier
     case Token::Kind::Number:
-        return parseNumberExpr();
+        return parseNumberExpr(); //parse a number: currently this is just a double, but more datatypes will be added
     case Token::Kind::LeftParen:
-        return parseParenExpr();
-    case Token::Kind::Keyword:
-        if (curTok.lexeme() == "if")
+        return parseParenExpr(); //parse everything, that is inside parentheses
+    case Token::Kind::Keyword: //here, the case is a bit more complex. After identifying the token as a keyword, the keyword type needs to be determined
+        switch (curTok.type())
         {
+        case Token::KeywordType::If:
             return ParseIfExpr();
-        } else if (curTok.lexeme() == "for")
-        {
+        case Token::KeywordType::For:
             return ParseForExpr();
-        } else if (curTok.lexeme() == "var") {
+        case Token::KeywordType::Var:
             return ParseVarExpr();
+        default:
+            return logError("CAUTION: Everything other than the if and for statements are not implemented. Expecting an if, for or var statement therefore", lex.getCurrentLineNumber());
         }
-        return logError("CAUTION: Everything other than the if and for statements are not implemented. Expecting an if or for statement therefore", lex.getCurrentLineNumber());
+        // if (curTok.lexeme() == "if") //Temporary
+        // {
+        //     return ParseIfExpr();
+        // } else if (curTok.lexeme() == "for")
+        // {
+        //     return ParseForExpr();
+        // } else if (curTok.lexeme() == "var") {
+        //     return ParseVarExpr();
+        // }
+        // return logError("CAUTION: Everything other than the if and for statements are not implemented. Expecting an if or for statement therefore", lex.getCurrentLineNumber());
     default:
         return logError("unknown token when expecting a expression", lex.getCurrentLineNumber());
     }
@@ -553,6 +565,17 @@ void Parser::parse() {
                 getNextToken();
                 break;
             case Token::Kind::Keyword:
+                // switch (curTok.type()) //currently doesn't work for some reason, need further investigation
+                // {
+                // case Token::KeywordType::Fn:
+                //     HandleDefinition();
+                //     break;
+                // case Token::KeywordType::Extern:
+                //     HandleExtern();
+                //     break;
+                // default:
+                //     break;
+                // }
                 if (curTok.lexeme() == "fn")
                 {
                     HandleDefinition();

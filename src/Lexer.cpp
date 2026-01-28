@@ -200,7 +200,7 @@ Token Lexer::next() noexcept {
     case '>':
       return atom(Token::Kind::GreaterThan);
     case '=':
-      return atom(Token::Kind::Equal);
+      return equal_or_doubleequal();
     case '+':
       return atom(Token::Kind::Plus);
     case '-':
@@ -268,6 +268,19 @@ Token Lexer::slash_or_comment() noexcept {
   } else {
     return Token(Token::Kind::Slash, start, 1);
   }
+}
+
+Token Lexer::equal_or_doubleequal() noexcept {
+  const char* start = m_beg;
+  get();
+  if (peek() == '=')
+  {
+    get();
+    return Token(Token::Kind::DoubleEqual, start, std::distance(start, m_beg));
+  } else {
+    return Token(Token::Kind::Equal, start, 1);
+  }
+  
 }
 
 int Lexer::getCurrentLineNumber() {
