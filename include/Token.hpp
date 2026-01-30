@@ -66,6 +66,8 @@ class Token {
     Comment,
     Pipe,
     Tilda,
+    Exclamation,
+    NotEqual,
     End,
     Unexpected,
   };
@@ -122,6 +124,10 @@ class Token {
   bool is_not(Kind kind) const noexcept { return m_kind != kind; }
 
   bool is_one_of(Kind k1, Kind k2) const noexcept { return is(k1) || is(k2); }
+
+  int length() {
+    return m_lexeme.length();
+  }
 
   template <typename... Ts>
   bool is_one_of(Kind k1, Kind k2, Ts... ks) const noexcept {

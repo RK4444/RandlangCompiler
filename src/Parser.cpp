@@ -40,6 +40,9 @@ Parser::Parser(const char* beg) : curTok(Token::Kind::Semicolon), lex(beg) {
     BinopPrecedence['+'] = 20;
     BinopPrecedence['-'] = 20;
     BinopPrecedence['*'] = 40;
+    BinopPrecedenceMultiChar[Token::Kind::DoubleEqual] = 3;
+    BinopPrecedenceMultiChar[Token::Kind::LessOrEqual] = 3;
+    BinopPrecedenceMultiChar[Token::Kind::GreaterOrEqual] = 3;
 
 
     InitializeModulesAndManagers();
@@ -258,7 +261,7 @@ std::unique_ptr<ASTNode> Parser::parseBinOpRHS(int exprPrec, std::unique_ptr<AST
             }
         }
         //std::cout << "Parsed RHS" << std::endl;
-        LHS = std::make_unique<BinaryASTNode>((char)*binOP.lexeme().begin(), std::move(LHS), std::move(RHS)); //attention here. this doesn't work probable
+        LHS = std::make_unique<BinaryASTNode>((binOP.length() <= 1) ? (char)*binOP.lexeme().begin() : '?', std::move(LHS), std::move(RHS), binOP.length() <= 1, binOP.kind()); //attention here. this doesn't work probable
     }
     
 }
@@ -541,12 +544,19 @@ std::unique_ptr<ASTNode> Parser::ParseVarExpr() {
     return std::make_unique<VarAstNode>(std::move(VarNames), std::move(Body));
 }
 
-int Parser::getTokenPrecedence() { 
-    if (!isascii((char)*curTok.lexeme().begin())) {
-        return -1;
-    }
+int Parser::getTokenPrecedence() {
+    int tokPrec = 0;
+    if (curTok.lexeme().length() <= 1)
+    {
+        if (!isascii((char)*curTok.lexeme().begin())) {
+            return -1;
+        }
 
-    int tokPrec = BinopPrecedence[(char)*curTok.lexeme().begin()];
+        tokPrec = BinopPrecedence[(char)*curTok.lexeme().begin()];
+    } else {
+        tokPrec = BinopPrecedenceMultiChar[curTok.kind()];
+    }
+    
     
     if (tokPrec <= 0) {
         return -1;

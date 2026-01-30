@@ -14,6 +14,7 @@ private:
     Token getNextToken();
     Lexer lex;
     std::map<char, int> BinopPrecedence;
+    std::map<Token::Kind, int> BinopPrecedenceMultiChar;
 
     std::unique_ptr<ASTNode> logError(const char* str, int linenumber);
     std::unique_ptr<PrototypeASTNode> pLogError(const char* str, int linenumber);

@@ -38,7 +38,7 @@ const std::string& VariableASTNode::getName() const {
     return varName;
 }
 
-BinaryASTNode::BinaryASTNode(char Op, std::unique_ptr<ASTNode> LHS, std::unique_ptr<ASTNode> RHS) : op(Op), LHS(std::move(LHS)), RHS(std::move(RHS)){}
+BinaryASTNode::BinaryASTNode(char Op, std::unique_ptr<ASTNode> LHS, std::unique_ptr<ASTNode> RHS, bool isSinglecharOperator, Token::Kind tokenkind) : op(Op), LHS(std::move(LHS)), RHS(std::move(RHS)), isSinglecharOperator(isSinglecharOperator), tokenkind(tokenkind){}
 
 CallASTNode::CallASTNode(const std::string& Callee, std::vector<std::unique_ptr<ASTNode>> arguments) : callee(Callee), args(std::move(arguments)) {}
 
@@ -130,25 +130,50 @@ llvm::Value* BinaryASTNode::codegen() {
     {
        return nullptr;
     }
-    
-    switch (op)
+    if (isSinglecharOperator)
     {
-    case '+':
-        return ASTNode::Builder->CreateFAdd(L, R, "addtmp");
-
-    case '-':
-        return ASTNode::Builder->CreateFSub(L, R, "subtmp");
-
-    case '*':
-        return ASTNode::Builder->CreateFMul(L, R, "multmp");
-
-    case '<':
-        L = ASTNode::Builder->CreateFCmpULT(L, R, "cmptmp");
-        return ASTNode::Builder->CreateUIToFP(L, llvm::Type::getDoubleTy(*TheContext), "booltmp");
+        
+        switch (op)
+        {
+        case '+':
+            return ASTNode::Builder->CreateFAdd(L, R, "addtmp");
     
-    default:
-        break;;
+        case '-':
+            return ASTNode::Builder->CreateFSub(L, R, "subtmp");
+    
+        case '*':
+            return ASTNode::Builder->CreateFMul(L, R, "multmp");
+    
+        case '<':
+            L = ASTNode::Builder->CreateFCmpULT(L, R, "cmptmpl");
+            return ASTNode::Builder->CreateUIToFP(L, llvm::Type::getDoubleTy(*TheContext), "booltmpl"); // Convert bool 0/1 to double 0.0 or 1.0
+        case '>':
+            L = ASTNode::Builder->CreateFCmpUGT(L, R, "cmptmpr");
+            return ASTNode::Builder->CreateUIToFP(L, llvm::Type::getDoubleTy(*TheContext), "booltmpr"); // Convert bool 0/1 to double 0.0 or 1.0 
+        
+        default:
+            break;;
+        }
+    } else {
+        switch (tokenkind)
+        {
+        case Token::Kind::DoubleEqual:
+            L = ASTNode::Builder->CreateFCmpUEQ(L, R);
+            return ASTNode::Builder->CreateUIToFP(L, llvm::Type::getDoubleTy(*TheContext), "booltmpe"); // Convert bool 0/1 to double 0.0 or 1.0
+        case Token::Kind::GreaterOrEqual:
+            L = ASTNode::Builder->CreateFCmpUGE(L, R, "cmptmpre");
+            return ASTNode::Builder->CreateUIToFP(L, llvm::Type::getDoubleTy(*TheContext), "booltmpre"); // Convert bool 0/1 to double 0.0 or 1.0
+        case Token::Kind::LessOrEqual:
+            L = ASTNode::Builder->CreateFCmpULE(L, R, "cmptmple");
+            return ASTNode::Builder->CreateUIToFP(L, llvm::Type::getDoubleTy(*TheContext), "booltmple"); // Convert bool 0/1 to double 0.0 or 1.0
+        case Token::Kind::NotEqual:
+            L = ASTNode::Builder->CreateFCmpUNE(L, R);
+            return ASTNode::Builder->CreateUIToFP(L, llvm::Type::getDoubleTy(*TheContext), "booltmpne"); // Convert bool 0/1 to double 0.0 or 1.0
+        default:
+            break;
+        }
     }
+    
 
     llvm::Function* F = FunctionASTNode::getFunction(std::string("binary") + op);
     assert(F && "binary operator not found!");

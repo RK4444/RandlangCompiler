@@ -45,7 +45,11 @@ class Lexer {
   Token identifier() noexcept;
   Token number() noexcept;
   Token slash_or_comment() noexcept;
+  Token or_is(Token::Kind first, Token::Kind second) noexcept;
   Token equal_or_doubleequal() noexcept;
+  Token greater_or_greaterorequal() noexcept;
+  Token less_or_lessorequal() noexcept;
+  Token exclamation_or_notEqual() noexcept;
   Token atom(Token::Kind) noexcept;
   bool is_space(char c) noexcept;
   bool is_digit(char c) noexcept;

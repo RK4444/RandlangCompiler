@@ -196,9 +196,9 @@ Token Lexer::next() noexcept {
     case '}':
       return atom(Token::Kind::RightCurly);
     case '<':
-      return atom(Token::Kind::LessThan);
+      return less_or_lessorequal();
     case '>':
-      return atom(Token::Kind::GreaterThan);
+      return greater_or_greaterorequal();
     case '=':
       return equal_or_doubleequal();
     case '+':
@@ -227,6 +227,8 @@ Token Lexer::next() noexcept {
       return atom(Token::Kind::Pipe);
     case '~':
       return atom(Token::Kind::Tilda);
+    case '!':
+      return exclamation_or_notEqual();
   }
 }
 
@@ -270,17 +272,31 @@ Token Lexer::slash_or_comment() noexcept {
   }
 }
 
-Token Lexer::equal_or_doubleequal() noexcept {
+Token Lexer::or_is(Token::Kind first, Token::Kind second) noexcept {
   const char* start = m_beg;
   get();
   if (peek() == '=')
   {
     get();
-    return Token(Token::Kind::DoubleEqual, start, std::distance(start, m_beg));
+    return Token(second, start, std::distance(start, m_beg));
   } else {
-    return Token(Token::Kind::Equal, start, 1);
+    return Token(first, start, 1);
   }
-  
+}
+
+Token Lexer::equal_or_doubleequal() noexcept {
+  return or_is(Token::Kind::Equal, Token::Kind::DoubleEqual);
+}
+
+Token Lexer::greater_or_greaterorequal() noexcept{
+  return or_is(Token::Kind::GreaterThan, Token::Kind::GreaterOrEqual);
+}
+Token Lexer::less_or_lessorequal() noexcept{
+  return or_is(Token::Kind::LessThan, Token::Kind::LessOrEqual);
+}
+
+Token Lexer::exclamation_or_notEqual() noexcept {
+  return or_is(Token::Kind::Exclamation, Token::Kind::NotEqual);
 }
 
 int Lexer::getCurrentLineNumber() {

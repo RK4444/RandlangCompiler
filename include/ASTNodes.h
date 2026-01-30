@@ -69,9 +69,11 @@ class BinaryASTNode : public ASTNode {
     private:
         char op;
         std::unique_ptr<ASTNode> LHS, RHS;
+        bool isSinglecharOperator;
+        Token::Kind tokenkind;
     
     public:
-        BinaryASTNode(char Op, std::unique_ptr<ASTNode> LHS, std::unique_ptr<ASTNode> RHS);
+        BinaryASTNode(char Op, std::unique_ptr<ASTNode> LHS, std::unique_ptr<ASTNode> RHS, bool isSinglecharOperator, Token::Kind tokenkind);
         llvm::Value* codegen() override;
 };
 
