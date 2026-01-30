@@ -27,10 +27,10 @@ It is currently able to emit object files.
 ## Usage
 After build, the main binary called `randlang` can be found in the `build2` directory. It can be used as follows:
 ```
-    randlang <somefile>.rdlg
+    randlang <somefile>.rdlg <somefile>.o
 ```
 
-This produces an object file called `output.o`
+This produces an object file called `<somefile>.o`
 
 ## Building the example
 In the example folder, a piece of randlang code and a `cpp` file can be found. When building the example with `make example`, a binary called `exampleMain` is emitted. The `cpp` code calls the `sum` function defined in randlang. If everything went well, the output `sum of 3.0 and 4.0: 7` should be displayed.
