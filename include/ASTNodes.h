@@ -107,11 +107,11 @@ class PrototypeASTNode : public ASTNode {
 class FunctionASTNode : public ASTNode {
     private:
         std::unique_ptr<PrototypeASTNode> proto;
-        std::unique_ptr<ASTNode> body;
+        std::vector<std::unique_ptr<ASTNode>> body;
         //std::map<char, int> BinopPrecedence;
         public:
         static std::map<std::string, std::unique_ptr<PrototypeASTNode>> FunctionProtos;
-        FunctionASTNode(std::unique_ptr<PrototypeASTNode> prototype, std::unique_ptr<ASTNode> Body);
+        FunctionASTNode(std::unique_ptr<PrototypeASTNode> prototype, std::vector<std::unique_ptr<ASTNode>> Body);
         llvm::Function* codegen() override;
         static llvm::Function* getFunction(std::string Name);
 };
@@ -119,9 +119,10 @@ class FunctionASTNode : public ASTNode {
 class IfExprAST : public ASTNode
 {
 private:
-    std::unique_ptr<ASTNode> Cond, Then, Else;
+    std::unique_ptr<ASTNode> Cond;
+    std::vector<std::unique_ptr<ASTNode>> Then, Else;
 public:
-    IfExprAST(std::unique_ptr<ASTNode> Cond, std::unique_ptr<ASTNode> Then, std::unique_ptr<ASTNode> Else);
+    IfExprAST(std::unique_ptr<ASTNode> Cond, std::vector<std::unique_ptr<ASTNode>> Then, std::vector<std::unique_ptr<ASTNode>> Else);
     //~IfExprAST();
     llvm::Value* codegen() override;
 };
@@ -130,10 +131,11 @@ class ForExprAST : public ASTNode
 {
 private:
     std::string VarName;
-    std::unique_ptr<ASTNode> Start, End, Step, Body;
+    std::unique_ptr<ASTNode> Start, End, Step;
+    std::vector<std::unique_ptr<ASTNode>> Body;
 public:
     ForExprAST(const std::string &VarName, std::unique_ptr<ASTNode> Start,
-        std::unique_ptr<ASTNode> End, std::unique_ptr<ASTNode> Step, std::unique_ptr<ASTNode> Body);
+        std::unique_ptr<ASTNode> End, std::unique_ptr<ASTNode> Step, std::vector<std::unique_ptr<ASTNode>> Body);
 
     llvm::Value* codegen() override;
 };

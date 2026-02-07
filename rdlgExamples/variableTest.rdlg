@@ -1,13 +1,28 @@
 extern putchard(x);
 
-fn binary:1(x y) y;
+fn binary:1(x y) {
+    y
+}
 
-fn test(x)
+fn test(x) {
     var a = 10 in
-    (putchard(x) : putchard(a));
+    (putchard(x) : putchard(a))
+    if x > 127 then {
+        (putchard(x) : putchard(10))
+    }
+    else {
+        putchard(42)
+        putchard(10)
+    }
+}
+    
 
-fn main(argc)
-    if 1 == 2 then
+fn main(argc) {
+    if 1 == 1 then {
         test(42)
-    else
-        test(45);
+    }
+    else {
+        test(45)
+    }
+}
+        

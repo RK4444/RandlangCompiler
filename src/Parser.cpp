@@ -102,6 +102,11 @@ std::unique_ptr<PrototypeASTNode> Parser::pLogError(const char* str, int linenum
     return nullptr;
 }
 
+std::unique_ptr<FunctionASTNode> Parser::fLogError(const char* str, int linenumber) {
+    logError(str, linenumber);
+    return nullptr;
+}
+
 std::unique_ptr<ASTNode> Parser::parseNumberExpr() {
     std::string finalNumber(std::string(curTok.lexeme()));
     double val = 0;
@@ -350,11 +355,29 @@ std::unique_ptr<FunctionASTNode> Parser::parseDefinition() {
     if (!Proto) {
         return nullptr;
     }
-
-    if (auto E = parseExpression()) {
-        //std::cout << "Parsed function" << std::endl;
-        return std::make_unique<FunctionASTNode>(std::move(Proto), std::move(E));
+    if (curTok.is_not(Token::Kind::LeftCurly))
+    {
+        return fLogError("Left curly for opening body expected");
     }
+    std::vector<std::unique_ptr<ASTNode>> bodyArgs;
+    getNextToken();
+    while (!curTok.is_one_of(Token::Kind::RightCurly, Token::Kind::End))
+    {
+        auto expression = parseExpression();
+        bodyArgs.push_back(std::move(expression));
+    }
+
+    if (curTok.is(Token::Kind::RightCurly))
+    {
+        getNextToken();
+        return std::make_unique<FunctionASTNode>(std::move(Proto), std::move(bodyArgs));
+    }
+    
+    
+    // if (auto E = parseExpression()) {
+    //     //std::cout << "Parsed function" << std::endl;
+    //     return std::make_unique<FunctionASTNode>(std::move(Proto), std::move(E));
+    // }
     return nullptr;
 }
 
@@ -365,15 +388,17 @@ std::unique_ptr<PrototypeASTNode> Parser::parseExtern() {
 }
 
 std::unique_ptr<FunctionASTNode> Parser::parseTopLevelExpr() {
+    std::vector<std::unique_ptr<ASTNode>> exprs;
     if (auto E = parseExpression())
     {
+        exprs.push_back(std::move(E));
         if (curTok.lexeme() == "main")
         {
             auto Proto = std::make_unique<PrototypeASTNode>("main", std::vector<std::string>());
-            return std::make_unique<FunctionASTNode>(std::move(Proto), std::move(E));
+            return std::make_unique<FunctionASTNode>(std::move(Proto), std::move(exprs));
         } else {
             auto Proto = std::make_unique<PrototypeASTNode>("", std::vector<std::string>());
-            return std::make_unique<FunctionASTNode>(std::move(Proto), std::move(E));
+            return std::make_unique<FunctionASTNode>(std::move(Proto), std::move(exprs));
         } 
     }
     return nullptr;
@@ -394,11 +419,23 @@ std::unique_ptr<ASTNode> Parser::ParseIfExpr() {
     }
     getNextToken();
 
-    auto Then = parseExpression();
-    if (!Then)
+    if (curTok.is_not(Token::Kind::LeftCurly))
     {
-        return nullptr;
+        return pLogError("Left curly for opening body expected");
     }
+    std::vector<std::unique_ptr<ASTNode>> Then;
+    getNextToken();
+    while (!curTok.is_one_of(Token::Kind::RightCurly, Token::Kind::End))
+    {
+        auto expression = parseExpression();
+        Then.push_back(std::move(expression));
+    }
+
+    if (curTok.is_not(Token::Kind::RightCurly))
+    {
+        return pLogError("Right curly expected", lex.getCurrentLineNumber());
+    }
+    getNextToken();
     
     if (curTok.lexeme() != "else")
     {
@@ -406,12 +443,29 @@ std::unique_ptr<ASTNode> Parser::ParseIfExpr() {
     }
     
     getNextToken();
+    // if (curTok.type() == Token::KeywordType::If)
+    // {
+    //     return ParseIfExpr();
+    // }
+    
 
-    auto Else = parseExpression();
-    if (!Else)
+    if (curTok.is_not(Token::Kind::LeftCurly))
     {
-        return nullptr;
+        return pLogError("Left curly for opening body expected");
     }
+    std::vector<std::unique_ptr<ASTNode>> Else;
+    getNextToken();
+    while (!curTok.is_one_of(Token::Kind::RightCurly, Token::Kind::End))
+    {
+        auto expression = parseExpression();
+        Else.push_back(std::move(expression));
+    }
+
+    if (curTok.is_not(Token::Kind::RightCurly))
+    {
+        return pLogError("Right curly expected", lex.getCurrentLineNumber());
+    }
+    getNextToken();
     
     return std::make_unique<IfExprAST>(std::move(Cond), std::move(Then), std::move(Else));
 }
@@ -466,14 +520,36 @@ std::unique_ptr<ASTNode> Parser::ParseForExpr() {
     }
 
     getNextToken();
-    auto Body = parseExpression();
-    if (!Body)
+    if (curTok.is_not(Token::Kind::LeftCurly))
     {
-        return nullptr;
+        return pLogError("Left curly for opening body expected");
     }
-    
+    std::vector<std::unique_ptr<ASTNode>> Body;
+    getNextToken();
+    while (!curTok.is_one_of(Token::Kind::RightCurly, Token::Kind::End))
+    {
+        auto expression = parseExpression();
+        Body.push_back(std::move(expression));
+    }
+
+    if (curTok.is_not(Token::Kind::RightCurly))
+    {
+        return pLogError("Right curly expected", lex.getCurrentLineNumber());
+    }
+    getNextToken();
     return std::make_unique<ForExprAST>(idName, std::move(Start), std::move(End), std::move(Step), std::move(Body));
 }
+
+// std::vector<std::unique_ptr<ASTNode>> Parser::parseBody() {
+//     std::vector<std::unique_ptr<ASTNode>> Body;
+//     getNextToken();
+//     while (!curTok.is_one_of(Token::Kind::RightCurly, Token::Kind::End))
+//     {
+//         auto expression = parseExpression();
+//         Body.push_back(std::move(expression));
+//     }
+//     return std::move(Body);
+// }
 
 std::unique_ptr<ASTNode> Parser::parseUnary() {
     if (curTok.is_one_of(Token::Kind::Comma, Token::Kind::LeftParen, Token::Kind::Identifier, Token::Kind::Number, Token::Kind::Keyword))

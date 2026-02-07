@@ -1,61 +1,85 @@
-fn binary : 1 (x y) y;
+fn binary : 1 (x y){
+  y
+}
 
-fn unary!(v)
-  if v then
+fn unary!(v) {
+  if v then {
     0
-  else
-    1;
-
-fn unary-(v)
-  0-v;
-
-fn binary> 10 (LHS RHS)
-  RHS < LHS;
-
-fn binary| 5 (LHS RHS)
-  if LHS then
+  }
+  else {
     1
-  else if RHS then
-    1
-  else
-    0;
+  }
+}
 
-fn binary= 9 (LHS RHS)
-  !(LHS < RHS | LHS > RHS);
+fn unary-(v){
+  0-v
+}
+
+fn binary| 5 (LHS RHS) {
+  if LHS then {
+    1
+  }
+  else {
+    if RHS then {
+      1
+    } else {
+      0
+    }
+  }
+}
+
+fn binary= 9 (LHS RHS) {
+  !(LHS < RHS | LHS > RHS)
+}
 
 extern putchard(char);
 
-fn printdensity(d)
-  if d > 8 then
+fn printdensity(d) {
+  if d > 8 then {
     putchard(32) 
-  else if d > 4 then
-    putchard(46) 
-  else if d > 2 then
-    putchard(43) 
-  else
-    putchard(42);
+  } else {
+    if d > 4 then {
+      putchard(46) 
+    }
+    else {
+      if d > 2 then {
+        putchard(43) 
+      }
+      else {
+        putchard(42)
+      }
+    }
+  }
+}
 
-fn mandelconverger(real imag iters creal cimag)
-  if iters > 255 | (real*real + imag*imag > 4) then
+fn mandelconverger(real imag iters creal cimag) {
+  if iters > 255 | (real*real + imag*imag > 4) then {
     iters
-  else
+  }
+  else {
     mandelconverger(real*real - imag*imag + creal,
                     2*real*imag + cimag,
-                    iters+1, creal, cimag);
+                    iters+1, creal, cimag)
+  }
+}
 
-fn mandelconverge(real imag)
-  mandelconverger(real, imag, 0, real, imag);
+fn mandelconverge(real imag) {
+  mandelconverger(real, imag, 0, real, imag)
+}
 
-fn mandelhelp(xmin xmax xstep   ymin ymax ystep)
-  for y = ymin, y < ymax, ystep in (
-    (for x = xmin, x < xmax, xstep in
-       printdensity(mandelconverge(x,y)))
-    : putchard(10)
-  )
+fn mandelhelp(xmin xmax xstep   ymin ymax ystep) {
+  for y = ymin, y < ymax, ystep in {
+    for x = xmin, x < xmax, xstep in {
+      printdensity(mandelconverge(x,y))
+    } : putchard(10)
+  } 
+}
 
-fn mandel(realstart imagstart realmag imagmag)
+fn mandel(realstart imagstart realmag imagmag) {
   mandelhelp(realstart, realstart+realmag*78, realmag,
-             imagstart, imagstart+imagmag*40, imagmag);
+             imagstart, imagstart+imagmag*40, imagmag)
+}
 
-fn main(argc)
-    mandel(-2.3, -1.3, 0.05, 0.07)
+fn main(argc) {
+  mandel(-2.3, -1.3, 0.05, 0.07)
+}

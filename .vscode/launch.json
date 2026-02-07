@@ -9,7 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/build/randlang",
-            "args": ["${workspaceFolder}/rdlgExamples/variableTest.rdlg", "output.o"],
+            "args": ["${workspaceFolder}/rdlgExamples/mandel.rdlg", "output.o"],
             "cwd": "${workspaceFolder}",
             "preLaunchTask": "Echo vars"
         }

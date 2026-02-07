@@ -18,6 +18,7 @@ private:
 
     std::unique_ptr<ASTNode> logError(const char* str, int linenumber);
     std::unique_ptr<PrototypeASTNode> pLogError(const char* str, int linenumber);
+    std::unique_ptr<FunctionASTNode> fLogError(const char* str, int linenumber=0);
     std::unique_ptr<ASTNode> parseNumberExpr();
     std::unique_ptr<ASTNode> parseParenExpr();
     std::unique_ptr<ASTNode> parseIdentifierExpr();
@@ -32,6 +33,7 @@ private:
     std::unique_ptr<ASTNode> ParseForExpr();
     std::unique_ptr<ASTNode> parseUnary();
     std::unique_ptr<ASTNode> ParseVarExpr();
+    //std::vector<std::unique_ptr<ASTNode>> parseBody();
     llvm::ExitOnError ExitOnErr;
     void InitializeModulesAndManagers();
     void HandleDefinition();

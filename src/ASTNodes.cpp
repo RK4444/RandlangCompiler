@@ -65,17 +65,17 @@ unsigned PrototypeASTNode::getBinaryPrecedence() const {
     return Precedence;
 }
 
-FunctionASTNode:: FunctionASTNode(std::unique_ptr<PrototypeASTNode> prototype, std::unique_ptr<ASTNode> Body) : proto(std::move(prototype)), body(std::move(Body)) {}
+FunctionASTNode:: FunctionASTNode(std::unique_ptr<PrototypeASTNode> prototype, std::vector<std::unique_ptr<ASTNode>> Body) : proto(std::move(prototype)), body(std::move(Body)) {}
 
 
-IfExprAST::IfExprAST(std::unique_ptr<ASTNode> Cond, std::unique_ptr<ASTNode> Then, std::unique_ptr<ASTNode> Else) : Cond(std::move(Cond)), Then(std::move(Then)), Else(std::move(Else)) {}
+IfExprAST::IfExprAST(std::unique_ptr<ASTNode> Cond, std::vector<std::unique_ptr<ASTNode>> Then, std::vector<std::unique_ptr<ASTNode>> Else) : Cond(std::move(Cond)), Then(std::move(Then)), Else(std::move(Else)) {}
 
 llvm::Value* NumberASTNode::codegen() {
     return llvm::ConstantFP::get(*TheContext, llvm::APFloat(val));
 }
 
 ForExprAST::ForExprAST(const std::string &VarName, std::unique_ptr<ASTNode> Start,
-    std::unique_ptr<ASTNode> End, std::unique_ptr<ASTNode> Step, std::unique_ptr<ASTNode> Body) : VarName(VarName), Start(std::move(Start)), End(std::move(End)), Step(std::move(Step)), Body(std::move(Body))
+    std::unique_ptr<ASTNode> End, std::unique_ptr<ASTNode> Step, std::vector<std::unique_ptr<ASTNode>> Body) : VarName(VarName), Start(std::move(Start)), End(std::move(End)), Step(std::move(Step)), Body(std::move(Body))
 {
 }
 
@@ -256,17 +256,33 @@ llvm::Function* FunctionASTNode::codegen() {
         NamedValues[std::string(Arg.getName())] = Alloca;
     }
 
-    if(llvm::Value *RetVal = body->codegen()) {
-        Builder->CreateRet(RetVal);
-        llvm::verifyFunction(*TheFunction);
-
-        TheFPM->run(*TheFunction, *TheFAM);
-
-        return TheFunction;
+    llvm::Value* lastValue;
+    for (auto &expr : body)
+    {
+        lastValue = expr->codegen();
+        if (!lastValue)
+        {
+            TheFunction->eraseFromParent();
+            return nullptr;
+        }
+        
     }
+    
+    Builder->CreateRet(lastValue);
+    llvm::verifyFunction(*TheFunction);
+    TheFPM->run(*TheFunction, *TheFAM);
+    return TheFunction;
 
-    TheFunction->eraseFromParent();
-    return nullptr;
+    // if(llvm::Value *RetVal = body->codegen()) {
+    //     Builder->CreateRet(RetVal);
+    //     llvm::verifyFunction(*TheFunction);
+
+    //     TheFPM->run(*TheFunction, *TheFAM);
+
+    //     return TheFunction;
+    // }
+
+    
 }
 
 llvm::Value* IfExprAST::codegen() {
@@ -288,10 +304,15 @@ llvm::Value* IfExprAST::codegen() {
 
     Builder->SetInsertPoint(ThenBB);
 
-    llvm::Value* ThenV = Then->codegen();
-    if (!ThenV)
+    llvm::Value* lastValueThen;
+    for (auto &expr : Then)
     {
-        return nullptr;
+        lastValueThen = expr->codegen();
+        if (!lastValueThen)
+        {
+            return nullptr;
+        }
+        
     }
     
     Builder->CreateBr(MergeBB);
@@ -301,10 +322,14 @@ llvm::Value* IfExprAST::codegen() {
     TheFunction->insert(TheFunction->end(), ElseBB);
     Builder->SetInsertPoint(ElseBB);
 
-    llvm::Value* ElseV = Else->codegen();
-    if (!ElseV)
+    llvm::Value* lastValueElse;
+    for (auto &expr : Else)
     {
-        return nullptr;
+        lastValueElse = expr->codegen();
+        if (!lastValueElse)
+        {
+            return nullptr;
+        } 
     }
     
     Builder->CreateBr(MergeBB);
@@ -314,8 +339,8 @@ llvm::Value* IfExprAST::codegen() {
     Builder->SetInsertPoint(MergeBB);
     llvm::PHINode* PN = Builder->CreatePHI(llvm::Type::getDoubleTy(*TheContext), 2, "iftmp");
 
-    PN->addIncoming(ThenV, ThenBB);
-    PN->addIncoming(ElseV, ElseBB);
+    PN->addIncoming(lastValueThen, ThenBB);
+    PN->addIncoming(lastValueElse, ElseBB);
     return PN;
 }
 
@@ -347,10 +372,21 @@ llvm::Value* ForExprAST::codegen() {
     llvm::AllocaInst* oldVal = NamedValues[VarName];
     NamedValues[VarName] = Alloca;
 
-    if (!Body->codegen())
+    llvm::Value* lastValue;
+    for (auto &expr : Body)
     {
-        return nullptr;
+        lastValue = expr->codegen();
+        if (!lastValue)
+        {
+            return nullptr;
+        }
+        
     }
+
+    // if (!Body->codegen())
+    // {
+    //     return nullptr;
+    // }
 
     llvm::Value* StepVal = nullptr;
     if (Step)
