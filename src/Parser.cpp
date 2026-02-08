@@ -443,29 +443,31 @@ std::unique_ptr<ASTNode> Parser::ParseIfExpr() {
     }
     
     getNextToken();
-    // if (curTok.type() == Token::KeywordType::If)
-    // {
-    //     return ParseIfExpr();
-    // }
-    
-
-    if (curTok.is_not(Token::Kind::LeftCurly))
-    {
-        return pLogError("Left curly for opening body expected");
-    }
     std::vector<std::unique_ptr<ASTNode>> Else;
-    getNextToken();
-    while (!curTok.is_one_of(Token::Kind::RightCurly, Token::Kind::End))
+    if (curTok.type() == Token::KeywordType::If)
     {
-        auto expression = parseExpression();
-        Else.push_back(std::move(expression));
+        auto nextif = ParseIfExpr();
+        Else.push_back(std::move(nextif));
+    } else {
+        if (curTok.is_not(Token::Kind::LeftCurly))
+        {
+            return pLogError("Left curly for opening body expected");
+        }
+        
+        getNextToken();
+        while (!curTok.is_one_of(Token::Kind::RightCurly, Token::Kind::End))
+        {
+            auto expression = parseExpression();
+            Else.push_back(std::move(expression));
+        }
+    
+        if (curTok.is_not(Token::Kind::RightCurly))
+        {
+            return pLogError("Right curly expected", lex.getCurrentLineNumber());
+        }
+        getNextToken();
     }
-
-    if (curTok.is_not(Token::Kind::RightCurly))
-    {
-        return pLogError("Right curly expected", lex.getCurrentLineNumber());
-    }
-    getNextToken();
+    
     
     return std::make_unique<IfExprAST>(std::move(Cond), std::move(Then), std::move(Else));
 }
